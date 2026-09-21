@@ -132,7 +132,8 @@
   const sections = extractContests();
   const all = [];
   if (sections) for (const [section, list] of Object.entries(sections)) if (Array.isArray(list)) for (const c of list) all.push({ section, ...c });
-  const everyBestBall = all.filter(isBestBall).sort((a, b) => (b.ContestId ?? 0) - (a.ContestId ?? 0));
+  // free contests (buy-in $0: community freerolls) are not part of the leaderboard
+  const everyBestBall = all.filter(isBestBall).filter((c) => c.BuyInAmount !== 0).sort((a, b) => (b.ContestId ?? 0) - (a.ContestId ?? 0));
   // dkbbdb is a season leaderboard: contests that start after NFL week 1 are left out (the site says where week 1 ends)
   let bestBall = everyBestBall;
   function applyCutoff(startsBefore) {
