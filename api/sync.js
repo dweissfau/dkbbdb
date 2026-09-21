@@ -1,10 +1,11 @@
 // POST /api/sync — the extension uploads a chunk of drafts (shape: lib/ingest.js). No sign-in: the DraftKings
-// account comes from the drafts themselves, and syncing is what makes a username searchable. Finished rosters
-// are never overwritten (lib/ingest.js), so an upload cannot change what is already stored for a pod.
-// Player lists the extension did not send are fetched from DraftKings' public feed, and players new to the
-// site are matched to the public stats feed so they score immediately.
+// account comes from the drafts themselves, and syncing is what makes a username searchable. Because anyone can
+// call this, every upload goes through lib/guard.js (plausibility checks, username lock, rate limits, upload log)
+// and can only ADD to what is stored — never change a finished roster, a contest, a username or a player list.
+// Players new to the site are matched to the public stats feed so they score immediately.
 import { db } from "../lib/db.js";
-import { fetchDraftables, ingestDrafts, missingDraftGroups } from "../lib/ingest.js";
+import { senderHash } from "../lib/guard.js";
+import { ingestDrafts } from "../lib/ingest.js";
 import { mapSleeper } from "../lib/sleeper.js";
 import aliases from "../db/sleeper-aliases.json" with { type: "json" };
 
@@ -14,17 +15,15 @@ export default async function handler(req, res) {
   res.setHeader("cache-control", "no-store");
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
   if (!req.headers["x-dkbbdb-extension"]) return res.status(400).json({ error: "uploads come from the dkbbdb extension" });
-  const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body ?? {};
+  let body;
+  try { body = typeof req.body === "string" ? JSON.parse(req.body) : req.body ?? {}; } catch { return res.status(400).json({ error: "not JSON" }); }
   if (!Array.isArray(body.drafts)) return res.status(400).json({ error: "drafts[] expected" });
   if (body.drafts.length > 300) return res.status(413).json({ error: "at most 300 drafts per upload" });
 
-  const out = await ingestDrafts(db(), body);
-  // body.last marks the final chunk of a sync: do the slower follow-ups once, there
-  if (body.last !== false) {
-    for (const dgid of await missingDraftGroups(db())) {
-      try { await ingestDrafts(db(), { drafts: [], draftables: { [dgid]: await fetchDraftables(dgid) } }); }
-      catch (e) { out.errors.push(String(e?.message ?? e)); }
-    }
+  const out = await ingestDrafts(db(), body, { sender: senderHash(req), ext: req.headers["x-dkbbdb-extension"] });
+  if (out.limited) return res.status(429).json({ error: out.limited });
+  // body.last marks the final chunk of a sync: do the slower follow-up once, there
+  if (body.last !== false && out.drafts) {
     try { const m = await mapSleeper(db(), { aliases }); out.mapped = m.mapped; out.unmatched = m.unmatched.map((u) => u.name); }
     catch (e) { out.errors.push("stats matching: " + String(e?.message ?? e)); }
   }

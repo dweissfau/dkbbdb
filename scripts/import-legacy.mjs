@@ -15,7 +15,7 @@ const lite = new Database(path.join(ROOT, "..", "data", "portfolio.sqlite"), { r
 const db = await connect();
 
 if (process.argv.includes("--reset")) {
-  await db.query("drop table if exists rank_history, entries, pod_teams, contests, dk_accounts, sync_tokens, users, draftables cascade");
+  await db.query("drop table if exists rank_history, entries, pod_teams, contests, dk_accounts, sync_tokens, users, draftables, upload_log cascade");
   await db.query(fs.readFileSync(path.join(ROOT, "db", "schema.sql"), "utf8"));
   console.log("tables recreated from db/schema.sql (sleeper_map kept)");
 }
@@ -35,7 +35,7 @@ for (const [username, drafts] of byUser) {
   // chunked like the extension will (keeps every request small)
   const total = { drafts: 0, pods: 0, teams: 0, errors: [] };
   for (let i = 0; i < drafts.length; i += 25) {
-    const r = await ingestDrafts(db, { drafts: drafts.slice(i, i + 25), ...(first ? { draftables, adp } : {}) });
+    const r = await ingestDrafts(db, { drafts: drafts.slice(i, i + 25), ...(first ? { draftables, adp } : {}) }, { trusted: true });
     first = false;
     total.drafts += r.drafts; total.pods += r.pods; total.teams += r.teams; total.errors.push(...r.errors);
   }

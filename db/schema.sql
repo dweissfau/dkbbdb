@@ -90,3 +90,20 @@ create table if not exists sleeper_map (
 -- per-contest facts the pages show that the pod itself does not carry
 alter table contests add column if not exists contest_type text;
 alter table contests add column if not exists picks_total int;
+
+-- every upload to the open /api/sync: who (hashed address — the address itself is never stored), which DraftKings
+-- accounts, how much. Feeds the rate limits (lib/guard.js) and lets bad data be traced and removed.
+create table if not exists upload_log (
+  id          bigserial primary key,
+  at          timestamptz not null default now(),
+  sender      text not null,
+  ext_version text,
+  user_keys   text[] not null default '{}',
+  usernames   text[] not null default '{}',
+  drafts      int not null default 0,
+  refreshed   int not null default 0,
+  skipped     int not null default 0,
+  rejected    int not null default 0,
+  note        text
+);
+create index if not exists upload_log_sender_at on upload_log (sender, at desc);
