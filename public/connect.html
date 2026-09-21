@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sync teams</title>
+<link rel="stylesheet" href="/site.css">
+</head>
+<body data-page="connect">
+<main class="page">
+  <div class="top"><h1 class="brand"><a href="/">dkbbdb</a></h1><div id="userBtn"></div></div>
+  <p class="lead" id="status">Three steps, about a minute. You need a computer with Chrome for this part; after that, any phone works.</p>
+
+  <div class="step">
+    <h2><span class="num">1</span>Install the extension</h2>
+    <p>DraftKings only shows your drafts to your own signed-in browser, so a small Chrome extension reads them for you. It never sees your DraftKings password.</p>
+    <p class="muted" id="extState">Checking for the extension…</p>
+  </div>
+
+  <div class="step">
+    <h2><span class="num">2</span>Connect it to your account</h2>
+    <p>This links the extension to the account you are signed in with here.</p>
+    <p><button class="cta" id="connectBtn" disabled>Connect extension</button></p>
+    <p id="connectMsg" class="muted"></p>
+  </div>
+
+  <div class="step">
+    <h2><span class="num">3</span>Sync your teams</h2>
+    <p>Open your DraftKings contests page while signed in to DraftKings, then click <b>Sync to dkbbdb</b> in the panel at the top right. Re-sync whenever you draft new teams, and once after each playoff round when teams move to new leagues.</p>
+    <p><a class="cta" href="https://www.draftkings.com/mycontests" target="_blank" rel="noopener">Open DraftKings contests ↗</a></p>
+    <p class="muted" id="teamCount"></p>
+  </div>
+
+  <p><a href="/app" id="openApp" hidden>Open my teams →</a></p>
+  <footer>Independent tool — not affiliated with, endorsed by, or sponsored by DraftKings. DraftKings is a trademark of its owner.</footer>
+</main>
+<script>
+// The extension's content script (extension/site.js) runs on this page and talks over window.postMessage:
+//   page → { dkbbdb: "ping" }            extension → { dkbbdb: "pong", version, connected }
+//   page → { dkbbdb: "token", token }    extension → { dkbbdb: "connected" }
+window.dkbbConnect = async (C) => {
+  const $ = (id) => document.getElementById(id);
+  C.mountUserButton($("userBtn"), { afterSignOutUrl: "/" });
+  let ext = null;
+  window.addEventListener("message", (e) => {
+    if (e.source !== window || !e.data?.dkbbdb) return;
+    if (e.data.dkbbdb === "pong") {
+      ext = e.data;
+      $("extState").innerHTML = `<span class="ok">✓ Extension installed</span> (version ${ext.version})${ext.connected ? " · already connected" : ""}`;
+      $("connectBtn").disabled = false;
+      if (ext.connected) $("connectBtn").textContent = "Reconnect extension";
+    }
+    if (e.data.dkbbdb === "connected") $("connectMsg").innerHTML = `<span class="ok">✓ Connected.</span> Go to step 3.`;
+  });
+  window.postMessage({ dkbbdb: "ping" }, location.origin);
+  setTimeout(() => {
+    if (ext) return;
+    $("extState").innerHTML = `Extension not detected. It is in private beta — ask for the install link, install it, then <a href="">reload this page</a>.`;
+    $("connectBtn").disabled = false; $("connectBtn").textContent = "Show a connection code instead";
+  }, 1500);
+
+  $("connectBtn").onclick = async () => {
+    $("connectBtn").disabled = true; $("connectMsg").textContent = "Connecting…";
+    try {
+      const { token } = await window.dkbbApi("/api/token", { method: "POST" });
+      if (ext) window.postMessage({ dkbbdb: "token", token }, location.origin);
+      else $("connectMsg").innerHTML = `Paste this code into the extension's popup (the puzzle-piece icon → dkbbdb):<code class="token">${token}</code>It replaces any earlier code and is shown only once.`;
+    } catch (e) { $("connectMsg").innerHTML = `<span class="err">${String(e.message).replace(/</g, "&lt;")}</span>`; }
+    $("connectBtn").disabled = false;
+  };
+
+  async function refreshCount() {
+    try {
+      const p = await window.dkbbApi("/api/portfolio");
+      const n = p.drafts.length;
+      $("teamCount").textContent = n ? `${n} team${n === 1 ? "" : "s"} synced${p.me.accounts.length ? ` from ${p.me.accounts.join(", ")}` : ""}.` : "No teams synced yet.";
+      $("openApp").hidden = !n;
+    } catch { /* keep the last text */ }
+  }
+  refreshCount();
+  setInterval(() => { if (document.visibilityState === "visible") refreshCount(); }, 10e3);
+};
+</script>
+<script src="/boot.js"></script>
+</body>
+</html>

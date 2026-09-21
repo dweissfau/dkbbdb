@@ -92,3 +92,15 @@ create table if not exists rank_history (
   points    numeric,
   primary key (entry_id, day)
 );
+
+-- DK playerId → Sleeper player id (public stats feed) — filled by scripts/map-sleeper.mjs and on sync
+create table if not exists sleeper_map (
+  player_id   int primary key,
+  sleeper_id  text not null,
+  team        text,
+  updated_at  timestamptz not null default now()
+);
+
+-- per-contest facts the pages show that the pod itself does not carry
+alter table contests add column if not exists contest_type text;
+alter table contests add column if not exists picks_total int;

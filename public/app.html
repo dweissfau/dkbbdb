@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dkbbdb</title>
+<style>
+:root {
+  /* permanent dark theme (owner's choice, 2026-09-10) */
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7;
+  --muted: #898781; --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,.10);
+  --seq: #3987e5; --seq-soft: #184f95;
+  --qb: #e03a3a; --rb: #1f9d4f; --wr: #f2c200; --te: #3987e5;   /* position badges: QB red, RB green, WR yellow, TE blue */
+  --blue: #3987e5; --chip-bad: #d95926; --chip-good: #199e70;   /* search 'mine' + chips keep their own colours */
+  --good: #0ca30c; --bad: #e66767; --accent: #3987e5;
+}
+* { box-sizing: border-box; }
+body.ro .owner-only { display: none !important; } /* hosted copy: viewers can't edit */
+body { margin: 0; background: var(--page); color: var(--ink);
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { display: flex; align-items: baseline; gap: 16px; padding: 18px 24px 0; flex-wrap: wrap; }
+header h1 { font-size: 20px; margin: 0; }
+header .sub { color: var(--muted); font-size: 12.5px; }
+header .spacer { flex: 1; }
+nav.tabs { display: flex; gap: 4px; padding: 10px 24px 0; border-bottom: 1px solid var(--grid); }
+nav.tabs button { background: none; border: none; border-bottom: 2px solid transparent;
+  color: var(--ink-2); font: inherit; font-weight: 600; padding: 8px 14px; cursor: pointer; }
+nav.tabs button.on { color: var(--ink); border-bottom-color: var(--accent); }
+main { padding: 18px 24px 60px; max-width: 1240px; margin: 0 auto; }
+section.tab { display: none; } section.tab.on { display: block; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.card .k { color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .02em; }
+.card .v { font-size: 24px; font-weight: 700; margin-top: 2px; }
+.card .d { color: var(--ink-2); font-size: 12.5px; margin-top: 2px; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 18px; }
+.panel h2 { font-size: 14px; margin: 0 0 10px; }
+.panel h2 .note { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: 8px; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+.filters .pills { display: flex; gap: 4px; }
+.filters button.pill { border: 1px solid var(--border); background: var(--surface); color: var(--ink-2);
+  border-radius: 999px; padding: 4px 12px; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.filters button.pill.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.filters select, .filters input { border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+  border-radius: 8px; padding: 5px 8px; font: inherit; font-size: 12.5px; }
+.dd { position: relative; }
+.dd-btn { border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+  border-radius: 8px; padding: 5px 10px; font: inherit; font-size: 12.5px; cursor: pointer; }
+.dd-btn.active { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.dd-panel { display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 30;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.25); padding: 8px; min-width: 300px; max-height: 320px; overflow: auto; }
+.dd.open .dd-panel { display: block; }
+.dd-panel label { display: flex; gap: 8px; align-items: center; padding: 4px 6px; border-radius: 6px;
+  cursor: pointer; font-size: 12.5px; white-space: nowrap; }
+.dd-panel label:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.dd-actions { display: flex; gap: 12px; padding: 2px 6px 6px; border-bottom: 1px solid var(--grid); margin-bottom: 4px; }
+.dd-actions a { color: var(--accent); cursor: pointer; font-size: 12px; font-weight: 600; }
+.filters .count { color: var(--muted); font-size: 12.5px; margin-left: auto; }
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+th { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; position: sticky; top: 0; background: var(--surface); }
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--ink); }
+th .arrow { font-size: 9px; }
+tbody tr:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+tbody tr.click { cursor: pointer; }
+.plink { cursor: pointer; }
+.plink:hover { color: var(--accent); text-decoration: underline; }
+.backlink { color: var(--accent); cursor: pointer; font-size: 12.5px; font-weight: 600; display: inline-block; margin-bottom: 8px; }
+.pos { display: inline-block; min-width: 26px; text-align: center; font-size: 11px; font-weight: 700;
+  border-radius: 4px; padding: 1px 5px; color: #fff; }
+.pos.QB { background: var(--qb); } .pos.RB { background: var(--rb); }
+.pos.WR { background: var(--wr); color: #111; } .pos.TE { background: var(--te); }
+.bar-cell { display: flex; align-items: center; gap: 8px; }
+.bar-track { flex: 0 0 90px; height: 6px; border-radius: 4px; background: color-mix(in srgb, var(--seq) 14%, transparent); overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 4px; background: var(--seq); }
+.diff-good { color: var(--good); font-weight: 600; }
+.diff-bad { color: var(--bad); font-weight: 600; }
+.chart { width: 100%; }
+.chart text { font: 11px system-ui, sans-serif; fill: var(--muted); }
+.chart .val { fill: var(--ink-2); font-weight: 600; }
+.chart .gridline { stroke: var(--grid); stroke-width: 1; }
+.chart .baseline { stroke: var(--axis); stroke-width: 1; }
+.chart rect.mark { fill: var(--seq); rx: 3; }
+.chart rect.hit { fill: transparent; }
+.chart rect.mark.hov { fill: color-mix(in srgb, var(--seq) 80%, var(--ink)); }
+#tooltip { position: fixed; pointer-events: none; background: var(--ink); color: var(--page);
+  font-size: 12px; padding: 5px 9px; border-radius: 6px; z-index: 50; display: none; white-space: nowrap; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+#modal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; z-index: 40;
+  align-items: flex-start; justify-content: center; padding: 40px 16px; overflow: auto; }
+#modal.on { display: flex; }
+#modal .box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  max-width: 1000px; width: 100%; padding: 20px; }
+/* league view inside the editor: standings left, the clicked team's roster right (same as the partner pages) */
+.lg-split { display: grid; grid-template-columns: minmax(260px, 2fr) 3fr; gap: 18px; align-items: start; }
+@media (max-width: 760px) { .lg-split { grid-template-columns: 1fr; } }
+.lg-split h4 { margin: 0 0 6px !important; }
+.lg-split .scroll-x { overflow-x: auto; }
+/* the page-level sticky <th> must not apply inside the team modal: the modal is its own scroll box, so on phones
+   (where .scroll-x stops scrolling sideways) both league tables' header rows would pin to the modal's top edge and
+   float over the player rows as you scroll — looked like a see-through layer on top of the roster */
+#modal th { position: static; }
+tr.pick { cursor: pointer; }
+tr.pick:hover td { background: var(--surface-2, rgba(255,255,255,.04)); }
+tr.pick.sel td { background: var(--accent-bg, rgba(57,135,229,.18)); }
+tr.pick.me td { font-weight: 700; }
+tr.pick td.team-name::after { content: " ›"; color: var(--muted); }
+tr.cut-line td { border-bottom: 2px solid var(--good); }
+tr.bench td { color: var(--ink-2); opacity: .75; }
+/* week strip above the league view: Season + one button per NFL week (that week's team score and place in the
+   league); picking a week switches the standings and the roster underneath to that week */
+.wkbar { display: flex; gap: 8px; overflow-x: auto; margin: 0 0 12px; padding-bottom: 4px; scrollbar-width: thin; }
+.wkbar .wk { flex: none; min-width: 84px; text-align: left; background: var(--surface-2, rgba(255,255,255,.04)); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; color: var(--ink); font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.wkbar .wk:hover { border-color: var(--accent); }
+.wkbar .wk.on { background: var(--accent-bg, rgba(57,135,229,.18)); border-color: var(--accent); }
+.wkbar .wk .k { display: block; color: var(--muted); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+.wkbar .wk .k .now { color: var(--good); }
+.wkbar .wk .v { display: block; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wkbar .wk .r { display: block; color: var(--ink-2); font-size: 11px; white-space: nowrap; }
+td.wk-muted { color: var(--muted); }
+.lg-who { font-size: 14px; font-weight: 700; color: var(--ink); }
+.lg-note { color: var(--muted); font-size: 12px; font-weight: 400; }
+/* player search (Season tab + editor): blue = my team has him, orange = an opponent in that league has him */
+:root { --warn: #e8a33d; --warn-bg: rgba(232,163,61,.20); }
+#seasonTable tr.hit-me td:first-child { box-shadow: inset 3px 0 0 var(--blue); }
+#seasonTable tr.hit-opp td:first-child { box-shadow: inset 3px 0 0 var(--warn); }
+.hit-mine { color: var(--blue); font-weight: 700; }
+.hit-opps { color: var(--warn); font-weight: 700; }
+.tag { display: inline-block; font-size: 10.5px; font-weight: 700; border-radius: 4px; padding: 0 6px; margin-left: 6px; vertical-align: middle; white-space: nowrap; }
+.tag.mine { background: var(--blue); color: #fff; }
+.tag.opp { background: var(--warn); color: #000; }
+tr.hit td { background: var(--accent-bg, rgba(57,135,229,.18)); color: var(--ink); font-weight: 700; }
+tr.hit.opp td { background: var(--warn-bg); }
+#seasonSearch:empty { display: none; }
+#seasonSearch b { color: var(--ink); }
+.tlogo { display: inline-block; width: 18px; height: 18px; vertical-align: middle; margin-right: 5px; object-fit: contain; }
+.playing { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 4px; background: color-mix(in srgb, var(--good) 16%, transparent); color: var(--good); font-size: 10.5px; font-weight: 700; white-space: nowrap; vertical-align: middle; }
+.playing::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--good); margin-right: 4px; vertical-align: middle; animation: pulse 1.6s infinite; }
+.playing-n { color: var(--good); font-weight: 700; }
+.gdone { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 4px; background: var(--grid, rgba(255,255,255,.08)); color: var(--muted); font-size: 10.5px; font-weight: 700; vertical-align: middle; }
+.gnext { display: inline-block; margin-left: 6px; color: var(--muted); font-size: 11px; vertical-align: middle; white-space: nowrap; }
+.live { color: var(--good); font-weight: 600; white-space: nowrap; }
+.live .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--good); margin-right: 5px; vertical-align: middle; box-shadow: 0 0 6px var(--good); animation: pulse 2s infinite; }
+.live.stale { color: var(--muted); } .live.stale .dot { background: var(--muted); box-shadow: none; animation: none; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+#modal h3 { margin: 0 0 4px; font-size: 16px; }
+#modal .meta { color: var(--ink-2); font-size: 12.5px; margin-bottom: 12px; }
+#modal .close { float: right; background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; }
+.chip { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 1px 8px; }
+#seasonList { display: none; }
+/* "Race" column of the Season table: the same rank line as the phone rows — last place at the left end, 1st at the
+   right, the advancing spots darker (green while this team is inside them), the clock = this team, red = minutes still to play */
+#seasonTable td .rbar { display: block; position: relative; width: 132px; height: 6px; border-radius: 3px; background: #5c5c58; margin: 15px 0 3px; }
+#seasonTable td .rbar .zone { position: absolute; right: 0; top: 0; height: 100%; border-radius: 0 3px 3px 0; background: #2a2a28; }
+#seasonTable tr.adv-in td .rbar .zone { background: var(--good); }
+#seasonTable td .rbar .mark { position: absolute; bottom: 100%; width: 14px; height: 14px; margin: 0 0 2px -7px; border-radius: 50%; background: conic-gradient(#e03a3a 0 var(--left, 0%), #f4f4f2 var(--left, 0%) 100%); box-shadow: 0 0 0 1.5px #2a2a28; }
+#seasonTable td .rbar .mark::after { content: ""; position: absolute; left: 50%; top: 100%; margin: 1px 0 0 -2px; border: 2px solid transparent; border-top: 3px solid #2a2a28; border-bottom: 0; }
+.card.click { cursor: pointer; user-select: none; }
+.card.click:hover { border-color: var(--accent); }
+.card.click.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.card.click .d::after { content: " · click to filter"; color: var(--muted); }
+.card.click.on .d::after { content: " · click to show all"; }
+.chip.high { background: color-mix(in srgb, var(--chip-bad) 16%, transparent); color: var(--chip-bad); }
+.chip.low  { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+.chip.none { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--muted); }
+.chip.ok   { background: color-mix(in srgb, var(--chip-good) 14%, transparent); color: var(--chip-good); }
+.stack-chip { display: inline-block; background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px; font-size: 12px; margin: 2px 4px 2px 0; }
+.btn { border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+  border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.scroll-x { overflow-x: auto; }
+.warn { color: var(--bad); }
+code { background: color-mix(in srgb, var(--ink) 6%, transparent); border-radius: 4px; padding: 1px 5px; font-size: 12px; }
+/* ---- phones only (≤ 640px): nothing below applies at desktop widths ---- */
+@media (max-width: 640px) {
+  header { padding: 12px 14px 0; gap: 8px 12px; }
+  header h1 { font-size: 18px; }
+  header .btn { padding: 5px 9px; font-size: 12px; }
+  nav.tabs { padding: 6px 8px 0; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  nav.tabs::-webkit-scrollbar { display: none; }
+  nav.tabs button { padding: 9px 10px; white-space: nowrap; flex: none; }
+  main { padding: 12px 12px 40px; }
+  .filters { gap: 6px; }
+  .filters .pills { flex-wrap: wrap; }
+  .filters button.pill { padding: 6px 11px; font-size: 12px; }
+  .filters select, .filters input { flex: 1 1 44%; min-width: 0; width: auto !important; font-size: 16px; padding: 7px 8px; }
+  .filters .dd { flex: 1 1 44%; min-width: 0; }
+  .filters .dd-btn { width: 100%; text-align: left; padding: 7px 10px; }
+  .dd-panel { min-width: 0; width: calc(100vw - 24px); max-width: calc(100vw - 24px); }
+  .filters .count { margin-left: 0; flex-basis: 100%; }
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+  .card { padding: 10px 12px; min-width: 0; }
+  .card .v { font-size: 19px; overflow-wrap: anywhere; }
+  .card .d { font-size: 11.5px; }
+  .panel { padding: 10px; margin-bottom: 12px; border-radius: 8px; }
+  .panel h2 .note { display: block; margin: 2px 0 0; }
+  table { font-size: 12.5px; }
+  th, td { padding: 7px 6px; }
+  tbody tr.click td, tr.pick td { padding-top: 9px; padding-bottom: 9px; }
+  #seasonTable td[data-key="name"], #partnerTable td[data-key="name"] { white-space: normal; min-width: 150px; }
+  #seasonTable [data-key="date"], #seasonTable [data-key="state"], #seasonTable [data-key="prizes"], #seasonTable [data-key="top"],
+  #partnerTable [data-key="date"], #partnerTable [data-key="state"], #partnerTable [data-key="prizes"], #partnerTable [data-key="top"] { display: none; }
+  /* keep align-items: flex-start here — `stretch` fixes .box's height to one screen, so everything below the first
+     screenful overflowed the box with no background and the page showed through the dimmed backdrop while scrolling */
+  #modal { padding: 0; }
+  #modal .box { border-radius: 0; border: 0; padding: 14px 12px 40px; min-height: 100%; max-width: none; }
+  #modal .close { font-size: 26px; line-height: 1; padding: 2px 8px; margin: -4px -6px 0 0; }
+  #modal h3 { padding-right: 40px; }
+  .lg-split { gap: 12px; }
+  .lg-split > * { min-width: 0; } /* let the standings/roster tables scroll inside instead of widening the modal */
+  /* editor league view: everything visible without sideways scrolling (team column hidden, names wrap, game tags under the name) */
+  #lgRoster th:nth-child(4), #lgRoster td:nth-child(4) { display: none; }
+  .lg-split td { white-space: normal; overflow-wrap: anywhere; }
+  .lg-split td.num, .lg-split .pos, .lg-split .tag { white-space: nowrap; }
+  .lg-split td .playing, .lg-split td .gdone, .lg-split td .gnext { display: block; width: max-content; max-width: 100%; margin: 2px 0 0; }
+  .lg-split .scroll-x { overflow-x: visible; }
+  .grid2 { gap: 12px; }
+  .grid2 > * { min-width: 0; }
+  /* phones: the Season standings table becomes a list of DraftKings-style rows; tapping one opens the team editor */
+  #seasonTable { display: none; }
+  #seasonList { display: block; }
+  .card.click .d::after { content: " · tap to filter"; }
+  .card.click.on .d::after { content: " · tap to show all"; }
+  .srow { display: flex; align-items: stretch; gap: 12px; width: 100%; background: var(--page); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; color: var(--ink); font: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .srow.hit-me { border-left: 3px solid var(--blue); }
+  .srow.hit-opp { border-left: 3px solid var(--warn); }
+  .srow .tl { flex: 1; min-width: 0; display: block; }
+  /* rank line: last place at the left end, 1st at the right; the darker right segment = advancing spots (green when inside); the clock = this team */
+  .srow .bar { display: block; position: relative; height: 8px; border-radius: 4px; background: #5c5c58; margin: 22px 14px 14px 0; }
+  .srow .zone { position: absolute; right: 0; top: 0; height: 100%; border-radius: 0 4px 4px 0; background: #2a2a28; }
+  .srow.adv-in .zone { background: var(--good); }
+  /* the clock sits just above the line; its red wedge = share of the roster's minutes still to play */
+  .srow .mark { position: absolute; bottom: 100%; width: 18px; height: 18px; margin: 0 0 2px -9px; border-radius: 50%; background: conic-gradient(#e03a3a 0 var(--left, 0%), #f4f4f2 var(--left, 0%) 100%); box-shadow: 0 0 0 1.5px #2a2a28; }
+  .srow .mark::after { content: ""; position: absolute; left: 50%; top: 100%; margin: 1px 0 0 -2px; border: 2px solid transparent; border-top: 3px solid #2a2a28; border-bottom: 0; }
+  .srow .ks { display: flex; gap: 6px 12px; flex-wrap: wrap; }
+  .srow .ks-i .k .lg { display: none; } /* "My stake" → "Stake": room for the week's score */
+  .srow .ks-i { display: block; min-width: 0; }
+  .srow .ks-i .k { display: block; color: var(--muted); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+  .srow .ks-i .v { display: block; font-size: 15px; font-weight: 700; white-space: nowrap; }
+  .srow .ks-i .v.won { color: var(--good); }
+  .srow .tr { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 5px; flex: none; width: 104px; }
+  .srow .pl { display: flex; align-items: baseline; font-size: 22px; font-weight: 800; white-space: nowrap; line-height: 1; }
+  .srow .pl small { color: var(--muted); font-weight: 500; font-size: 12px; margin-left: 2px; }
+  .srow .chev { color: var(--muted); font-size: 22px; font-weight: 400; margin-left: 6px; line-height: 1; display: inline-block; }
+  .srow .when { color: var(--muted); font-size: 10.5px; white-space: nowrap; }
+}
+
+/* public version: no partner features, no local-tooling tab */
+nav.tabs button[data-tab="partners"], nav.tabs button[data-tab="debug"], [data-sf="shared"],
+#seasonTable [data-key="partners"] { display: none !important; }
+</style>
+</head>
+<body>
+<div id="tooltip"></div>
+<header>
+  <h1>dkbbdb</h1>
+  <div class="sub" id="genInfo"></div>
+  <div class="spacer"></div>
+  <a class="btn" href="/connect" style="text-decoration:none">Sync teams</a>
+  <button class="btn" id="exportCsv">Export CSV</button>
+  <button class="btn" id="exportJson">Export JSON</button>
+  <div id="userBtn" style="margin-left:10px"></div>
+</header>
+<nav class="tabs" id="tabs">
+  <button data-tab="season" class="on">Season</button>
+  <button data-tab="partners">Partners</button>
+  <button data-tab="exposure">Player Exposure</button>
+  <button data-tab="balance">Balance</button>
+  <button data-tab="overview">Overview</button>
+  <button data-tab="rosters">Rosters</button>
+  <button data-tab="analytics">Analytics</button>
+  <button data-tab="debug">Debug</button>
+</nav>
+<main>
+  <div class="filters" id="filterBar">
+    <div class="pills" id="posPills">
+      <button class="pill on" data-pos="">All</button>
+      <button class="pill" data-pos="QB">QB</button>
+      <button class="pill" data-pos="RB">RB</button>
+      <button class="pill" data-pos="WR">WR</button>
+      <button class="pill" data-pos="TE">TE</button>
+    </div>
+    <select id="fTeam"><option value="">All teams</option></select>
+    <div class="dd" id="contestDD">
+      <button class="dd-btn" id="contestBtn">All contests ▾</button>
+      <div class="dd-panel" id="contestPanel"></div>
+    </div>
+    <div class="dd" id="buyinDD">
+      <button class="dd-btn" id="buyinBtn">All buy-ins ▾</button>
+      <div class="dd-panel" id="buyinPanel"></div>
+    </div>
+    <input type="date" id="fFrom" title="Draft date from">
+    <input type="date" id="fTo" title="Draft date to">
+    <input type="number" id="fLastN" placeholder="Last N drafts" title="Only the N most recent drafts (after other roster filters)" style="width:100px" min="1">
+    <input type="number" id="fAdpMax" placeholder="ADP ≤" title="Only players whose current DK ADP is at or under this" style="width:76px" min="1">
+    <input type="search" id="fSearch" placeholder="Search player…">
+    <span class="count" id="filterCount"></span>
+  </div>
+
+  <section class="tab on" id="tab-season">
+    <div class="cards" id="seasonCards"></div>
+    <div class="panel scroll-x">
+      <h2>Team standings <span class="note" id="seasonNote"></span></h2>
+      <div class="note" id="seasonSearch" style="margin:-4px 0 10px;font-size:12.5px"></div>
+      <div class="filters" style="margin-bottom:10px">
+        <div class="pills" id="seasonPills">
+          <button class="pill on" data-sf="">All</button>
+          <button class="pill" data-sf="advancing">Advancing</button>
+          <button class="pill" data-sf="out">Outside cutoff</button>
+          <button class="pill" data-sf="shared">Shared</button>
+          <button class="pill" data-sf="manual">Manual ✎</button>
+        </div>
+        <button class="btn owner-only" id="exportTeams" title="Download manual scores & partner shares as dkbb-teams-*.json — npm run refresh imports it so the data survives dashboard rebuilds and other browsers">Export teams file</button>
+        <span class="count" id="seasonCount"></span>
+      </div>
+      <table id="seasonTable"><thead></thead><tbody></tbody></table>
+      <div id="seasonList"></div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-partners">
+    <div class="cards" id="partnerCards"></div>
+    <div class="panel scroll-x">
+      <h2>Shared teams <span class="note" id="partnerNote">teams with a partner listed · pick a name to see just their teams</span></h2>
+      <div class="filters" style="margin-bottom:10px">
+        <div class="pills" id="partnerPills"></div>
+        <span class="count" id="partnerCount"></span>
+      </div>
+      <table id="partnerTable"><thead></thead><tbody></tbody></table>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-exposure">
+    <div class="panel scroll-x">
+      <h2>Player exposure <span class="note">exposure % = rosters containing player ÷ filtered rosters</span></h2>
+      <table id="expTable"><thead></thead><tbody></tbody></table>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-balance">
+    <div class="panel scroll-x">
+      <h2>Draft board balance <span class="note" id="balNote"></span></h2>
+      <table id="balTable"><thead></thead><tbody></tbody></table>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-overview">
+    <div class="cards" id="ovCards"></div>
+    <div class="grid2">
+      <div class="panel"><h2>Drafts by date</h2><div id="chartByDate"></div></div>
+      <div class="panel scroll-x"><h2>Drafts by contest</h2><table id="ovContests"><thead>
+        <tr><th>Contest</th><th class="num">Drafts</th><th class="num">Fees</th></tr></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-rosters">
+    <div class="panel scroll-x">
+      <h2>Drafts <span class="note">click a row for the full roster</span></h2>
+      <table id="rosterTable"><thead></thead><tbody></tbody></table>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-analytics">
+    <div class="grid2">
+      <div class="panel"><h2>NFL team exposure <span class="note">% of filtered rosters with ≥1 player</span></h2><div id="chartTeams"></div></div>
+      <div>
+        <div class="panel"><h2>Position share of picks</h2><div id="chartPos"></div></div>
+        <div class="panel scroll-x"><h2>Roster constructions <span class="note">complete drafts only</span></h2>
+          <table id="constrTable"><thead><tr><th>Construction</th><th class="num">Rosters</th><th class="num">%</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="panel scroll-x"><h2>Top 2-player combos</h2>
+        <table id="combo2"><thead><tr><th>Players</th><th class="num">Rosters</th><th class="num">%</th></tr></thead><tbody></tbody></table></div>
+      <div class="panel scroll-x"><h2>Top 3-player combos</h2>
+        <table id="combo3"><thead><tr><th>Players</th><th class="num">Rosters</th><th class="num">%</th></tr></thead><tbody></tbody></table></div>
+    </div>
+    <div class="grid2">
+      <div class="panel scroll-x"><h2>QB stacks <span class="note">QB + same-team pass catcher</span></h2>
+        <table id="qbStacks"><thead><tr><th>Stack</th><th class="num">Rosters</th><th class="num">%</th></tr></thead><tbody></tbody></table></div>
+      <div class="panel scroll-x"><h2>Team stacks <span class="note">same-team player counts per roster</span></h2>
+        <table id="teamStacks"><thead><tr><th>Team</th><th class="num">Avg players</th><th class="num">3+ stack</th><th class="num">4+ stack</th></tr></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-debug">
+    <div class="panel" id="debugInfo"></div>
+    <div class="panel scroll-x"><h2>Incomplete / in-progress drafts</h2>
+      <table id="dbgIncomplete"><thead><tr><th>Entry</th><th>Contest</th><th>Date</th><th class="num">Picks</th><th>State</th></tr></thead><tbody></tbody></table></div>
+  </section>
+  <footer style="color:var(--muted);font-size:12px;margin-top:24px">Independent tool — not affiliated with, endorsed by, or sponsored by DraftKings. DraftKings is a trademark of its owner.</footer>
+</main>
+<div id="modal"><div class="box" id="modalBox"></div></div>
+
+<script src="/boot.js"></script>
+</body>
+</html>
