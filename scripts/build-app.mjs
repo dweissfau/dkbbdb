@@ -66,6 +66,14 @@ js = swap(js, `\${me ? "my" : \`<b style="color:var(--ink)">\${esc(std?.[1] ?? "
   `<b style="color:var(--ink)">\${esc(std?.[1] ?? "this team")}</b>'s score each week`, "week strip heading");
 js = swap(js, "`Synced: ${syn.rank != null", "`Now: ${syn.rank != null", "status line");
 
+// the public version has no partner shares and no manual overrides: every team belongs to the account it was
+// synced from and counts at its full buy-in, whatever a browser's storage may hold
+js = swap(js, `function sharesOf(id) { return LS.shares[id] ?? SEA.shares[id] ?? []; }`, `function sharesOf() { return []; }`, "no shares");
+js = swap(js, `  const ls = LS.entries[id] ?? {};
+`, `  const ls = {};
+`, "no manual overrides");
+js = swap(js, `<span class="lg">My </span>stake`, `Buy-in`, "stake label");
+
 fs.mkdirSync(path.join(ROOT, "public"), { recursive: true });
 fs.writeFileSync(path.join(ROOT, "public", "app.html"), html);
 fs.writeFileSync(path.join(ROOT, "public", "app.js"), js);

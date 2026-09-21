@@ -426,14 +426,14 @@ function rankSpark(series, entrants) {
 // an explicitly emptied field ("") masks the baseline (reverts to synced)
 function manualOf(id) {
   const m = { ...(SEA.manual[id] ?? {}) };
-  const ls = LS.entries[id] ?? {};
+  const ls = {};
   for (const k of Object.keys(ls)) {
     if (ls[k] === "" || ls[k] == null) delete m[k];
     else m[k] = ls[k];
   }
   return m;
 }
-function sharesOf(id) { return LS.shares[id] ?? SEA.shares[id] ?? []; }
+function sharesOf() { return []; }
 function myShareOf(id) {
   const sum = sharesOf(id).reduce((s, x) => s + (numOr(x.pct) ?? 0), 0);
   return Math.min(1, Math.max(0, 1 - sum / 100));
@@ -613,7 +613,7 @@ function seasonCardHtml(d, s, hit) {
   const dShort = s.delta == null || s.delta === 0 ? "" : s.delta > 0 ? ` · <span class="diff-good">▲${s.delta}</span>` : ` · <span class="diff-bad">▼${-s.delta}</span>`;
   return `<button class="srow${hit?.mine.length ? " hit-me" : hit?.opps.length ? " hit-opp" : ""}${s.advancing ? " adv-in" : ""}" type="button" data-id="${d.id}" title="${esc(shortContest(d.name))}"><span class="tl">
       <span class="bar" title="${s.rank != null ? `${ord(s.rank)} of ${s.entrants ?? "?"} · ` : ""}top ${s.cutoff ?? 2} advance${s.advancing ? " — inside the cutoff" : ""}"><span class="zone" style="width:${zonePct}%"></span>${markPct != null ? `<span class="mark" style="left:${markPct}%;--left:${leftPct}%" title="${left != null ? `${left} of ${nR} players still to play` : ""}"></span>` : ""}</span>
-      <span class="ks"><span class="ks-i"><span class="k"><span class="lg">My </span>stake</span><span class="v">${fmt$(stake)}</span></span><span class="ks-i"><span class="k">Left</span><span class="v">${left ?? "—"}</span></span><span class="ks-i ks-wk" title="points scored this week (FPTS is the season total)"><span class="k">${SEA.week ? `Wk ${SEA.week}` : "This wk"}</span><span class="v">${(() => { const w = teamWeekPts(d); return w != null ? w.toFixed(2) : "—"; })()}</span></span><span class="ks-i"><span class="k">FPTS</span><span class="v">${s.points != null ? s.points.toFixed(2) : "—"}</span></span>${s.prizes ? `<span class="ks-i"><span class="k">Won</span><span class="v won">${fmt$(s.prizes)}</span></span>` : ""}</span>
+      <span class="ks"><span class="ks-i"><span class="k">Buy-in</span><span class="v">${fmt$(stake)}</span></span><span class="ks-i"><span class="k">Left</span><span class="v">${left ?? "—"}</span></span><span class="ks-i ks-wk" title="points scored this week (FPTS is the season total)"><span class="k">${SEA.week ? `Wk ${SEA.week}` : "This wk"}</span><span class="v">${(() => { const w = teamWeekPts(d); return w != null ? w.toFixed(2) : "—"; })()}</span></span><span class="ks-i"><span class="k">FPTS</span><span class="v">${s.points != null ? s.points.toFixed(2) : "—"}</span></span>${s.prizes ? `<span class="ks-i"><span class="k">Won</span><span class="v won">${fmt$(s.prizes)}</span></span>` : ""}</span>
     </span><span class="tr"><span class="pl">${s.rank != null ? `${ord(s.rank)}<small>/${s.entrants ?? "?"}</small>` : "—"}<span class="chev" aria-hidden="true">›</span></span>${chip}<small class="when">${localDate(d.date)} · pick ${d.slot ?? "—"}${dShort}</small></span></button>`;
 }
 document.getElementById("seasonList").addEventListener("click", (e) => { const b = e.target.closest(".srow"); if (b) openSeason(Number(b.dataset.id)); });
