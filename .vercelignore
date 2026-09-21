@@ -1,4 +1,4 @@
 extension
 scripts
-pending
+store
 .env*

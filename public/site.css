@@ -93,3 +93,7 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
   td, th { padding: 8px 6px; }
   td.contest { font-size: 12.5px; }
 }
+
+/* privacy page */
+.doc h1 { font-size: 22px; margin: 6px 0 4px; }
+footer a { color: inherit; }
