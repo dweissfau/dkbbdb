@@ -1,7 +1,7 @@
 // Leaderboard filters + player stats straight from the lib (no HTTP), with invariants checked.
 //   node scripts/check-leaderboard.mjs [player name]
 import { connect, loadEnv } from "./db.mjs";
-import { leaderboard, playersView, searchPlayers, usersView } from "../lib/leaderboard.js";
+import { leaderboard, playersView, searchPlayers } from "../lib/leaderboard.js";
 
 process.env.DATABASE_URL ??= loadEnv().DATABASE_URL;
 const db = await connect();
@@ -57,12 +57,6 @@ const qbs = await playersView(db, { pos: "QB", sort: "advRate", dir: "desc", lim
 ok("players view: position filter + sort by advance rate", qbs.rows.every((r) => r.pos === "QB") && qbs.rows.filter((r) => r.advRate != null).every((r, i, l) => i === 0 || l[i - 1].advRate >= r.advRate), `${qbs.total} QBs, top ${qbs.rows[0]?.name} ${qbs.rows[0]?.advRate}%`);
 const pvU = await playersView(db, { u: "fleaflick" });
 ok("players view within one username", pvU.stats.field === 10 && pvU.rows.every((r) => r.teams <= 10));
-
-// users view
-const uv = await usersView(db, {});
-const kk = uv.rows.find((r) => r.user === "kknox20");
-ok("users view: one row per account, totals add up", uv.total === all.accounts && uv.rows.reduce((s, r) => s + r.teams, 0) === all.teams, uv.rows.map((r) => `${r.user} ${r.teams} teams $${r.buyIns} ${r.advancing} adv`).join(" | "));
-ok("users view: best team = that user's top leaderboard row", kk && kk.best === (await leaderboard(db, { u: "kknox20", limit: 1 })).rows[0].points, `kknox20 best ${kk?.best}`);
 
 await db.end();
 console.log(checks.every(Boolean) ? `\nall ${checks.length} checks pass` : `\n${checks.filter((c) => !c).length} FAILED`);

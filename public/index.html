@@ -45,7 +45,6 @@
       <div class="pills" id="tabs" role="tablist">
         <button class="pill on" data-tab="teams" role="tab">Teams</button>
         <button class="pill" data-tab="players" role="tab">Players</button>
-        <button class="pill" data-tab="users" role="tab">Users</button>
       </div>
       <div class="pills" id="posPills" hidden>
         <button class="pill mini on" data-pos="">All</button><button class="pill mini" data-pos="QB">QB</button><button class="pill mini" data-pos="RB">RB</button><button class="pill mini" data-pos="WR">WR</button><button class="pill mini" data-pos="TE">TE</button>
@@ -85,9 +84,9 @@
   const PAGE = 100;
 
   // the whole state lives in the address, so any view can be shared or bookmarked:
-  //   ?tab=teams|players|users &t=tournament &u=username &p=playerId[,id…] &adv=1 &pos=QB &sort=&dir= &team=entryId
+  //   ?tab=teams|players &t=tournament &u=username &p=playerId[,id…] &adv=1 &pos=QB &sort=&dir= &team=entryId
   const sp = new URLSearchParams(location.search);
-  const F = { tab: ["players", "users"].includes(sp.get("tab")) ? sp.get("tab") : "teams", t: sp.get("t") ?? "", u: sp.get("u") ?? "", p: sp.get("p") ?? "",
+  const F = { tab: sp.get("tab") === "players" ? "players" : "teams", t: sp.get("t") ?? "", u: sp.get("u") ?? "", p: sp.get("p") ?? "",
     adv: sp.get("adv") === "1" ? "1" : "", pos: sp.get("pos") ?? "", sort: sp.get("sort") ?? "", dir: sp.get("dir") ?? "", team: sp.get("team") ?? "" };
   let data = null, rows = [], shown = PAGE;
 
@@ -104,14 +103,11 @@
     players: [[null, "", "rk num", (r) => r.n], ["name", "Player", "user", (r) => `${posTag(r.pos)} ${logo(r.team)}<span class="pname">${esc(r.name)}</span>`],
       ["teams", "Teams", "num", (r) => r.teams], ["own", L("Ownership", "Own"), "num", (r) => pc1(r.own)], ["advancing", "Advancing", "num col-buyin", (r) => r.advancing],
       ["advRate", L("Advance rate", "Adv %"), "num", (r) => pc1(r.advRate)], ["avgPick", "Avg pick", "num col-date", (r) => r.avgPick == null ? "—" : Number(r.avgPick).toFixed(1)]],
-    users: [[null, "", "rk num", (r) => r.n], ["user", "User", "user", (r) => `<span class="pname">${esc(r.user)}</span>`], ["teams", "Teams", "num", (r) => r.teams],
-      ["buyIns", "Buy-ins", "num col-buyin", (r) => money(r.buyIns)], ["advancing", L("Advancing", "Adv"), "num", (r) => r.advancing], ["advRate", L("Advance rate", "Adv %"), "num", (r) => pc1(r.advRate)],
-      ["best", L("Best team", "Best"), "num", (r) => `<b>${pts(r.best)}</b>`], [null, "", "contest col-date", (r) => esc(r.bestContest)]],
   };
   const ASC_FIRST = new Set(["user", "name", "avgPick", "rank", "date"]); // columns whose natural first click is ascending
 
   const params = (extra) => { const q = { view: F.tab, t: F.t, sort: F.sort, dir: F.dir, ...extra };
-    if (F.tab !== "users") q.u = F.u;
+    q.u = F.u;
     if (F.tab === "teams") { q.p = F.p; q.adv = F.adv; }
     if (F.tab === "players") q.pos = F.pos;
     return new URLSearchParams(Object.entries(q).filter(([, v]) => v !== "" && v != null)); };
@@ -132,11 +128,11 @@
     for (const b of $("tabs").children) b.classList.toggle("on", b.dataset.tab === F.tab);
     for (const b of $("posPills").children) b.classList.toggle("on", b.dataset.pos === F.pos);
     $("posPills").hidden = F.tab !== "players"; $("advWrap").hidden = F.tab !== "teams"; $("advOnly").checked = F.adv === "1";
-    $("fP").hidden = F.tab !== "teams"; $("fU").hidden = F.tab === "users";
+    $("fP").hidden = F.tab !== "teams";
 
     // active username / player filters
     const chips = [];
-    if (f.u && F.tab !== "users") chips.push(`<span class="tag">${esc(f.u)}<button data-clear="u" aria-label="Clear username">✕</button></span>`);
+    if (f.u) chips.push(`<span class="tag">${esc(f.u)}<button data-clear="u" aria-label="Clear username">✕</button></span>`);
     const np = F.tab === "teams" ? f.p.length : 0;
     if (np) for (const p of f.p) chips.push(`<span class="tag">${posTag(p.pos)}${esc(p.name)} <i>${esc(p.team ?? "")}</i><button data-clear="p" data-id="${p.id}" aria-label="Remove ${esc(p.name)}">✕</button></span>`);
     if (np && np < 5) chips.push(`<span class="sub" style="color:var(--muted)">add another player to see teams with ${np === 1 ? "both" : "all of them"}</span>`);
@@ -144,22 +140,22 @@
 
     // summary cards: a player's (or combo's) numbers against the field left by the tournament / username filters
     const fieldRate = pct(s.fieldAdvancing, s.fieldRanked), them = np === 1 ? "him" : np === 2 ? "both" : `all ${np}`;
-    const scope = `${f.t ? " in this tournament" : ""}${f.u && F.tab !== "users" ? ` of ${f.u}` : ""}`;
+    const scope = `${f.t ? " in this tournament" : ""}${f.u ? ` of ${f.u}` : ""}`;
     const cards = np
       ? [[`Teams with ${them}`, s.count.toLocaleString(), `of ${s.field.toLocaleString()} team${s.field === 1 ? "" : "s"}${scope}`],
          ["Ownership", pct(s.count, s.field), `share of those teams that drafted ${them}`],
          ["Advance rate", pct(s.advancing, s.ranked), `all teams: ${fieldRate}`],
          ["Advancing", s.advancing.toLocaleString(), `of the ${s.count.toLocaleString()} team${s.count === 1 ? "" : "s"} with ${them} are inside the cut line now`]]
-      : [["Teams", s.field.toLocaleString(), f.u && F.tab !== "users" ? `synced by ${f.u}` : `from ${data.accounts.toLocaleString()} account${data.accounts === 1 ? "" : "s"}${f.t ? ", this tournament" : ""}`],
+      : [["Teams", s.field.toLocaleString(), f.u ? `synced by ${f.u}` : `from ${data.accounts.toLocaleString()} account${data.accounts === 1 ? "" : "s"}${f.t ? ", this tournament" : ""}`],
          ["Advancing", s.fieldAdvancing.toLocaleString(), "inside their league's cut line now"],
          ["Advance rate", fieldRate, "of teams with a league place"]];
     $("cards").innerHTML = cards.map(([k, v, d]) => `<div class="card"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="d">${esc(d)}</div></div>`).join("");
 
-    const unit = F.tab === "teams" ? "team" : F.tab === "players" ? "player" : "user";
-    $("count").textContent = `${data.total.toLocaleString()} ${unit}${data.total === 1 ? "" : "s"}` + (F.tab === "players" ? " · click one to see the teams that have him" : F.tab === "users" ? " · click one to see their teams" : " · click one to see its league");
+    const unit = F.tab === "teams" ? "team" : "player";
+    $("count").textContent = `${data.total.toLocaleString()} ${unit}${data.total === 1 ? "" : "s"}` + (F.tab === "players" ? " · click one to see the teams that have him" : " · click one to see its league");
     const thClass = (cls) => cls.split(" ").filter((c) => c === "num" || c.startsWith("col-")).join(" ");
     $("thead").innerHTML = cols.map(([key, label, cls]) => `<th class="${thClass(cls)}${key ? " sortable" : ""}"${key ? ` data-sort="${key}" tabindex="0"` : ""}>${label}${key && data.sort === key ? `<span class="arrow">${data.dir === "asc" ? "▲" : "▼"}</span>` : ""}</th>`).join("");
-    const attr = (r) => F.tab === "teams" ? `data-id="${esc(r.id)}"` : F.tab === "players" ? `data-player="${r.id}"` : `data-account="${esc(r.user)}"`;
+    const attr = (r) => F.tab === "teams" ? `data-id="${esc(r.id)}"` : `data-player="${r.id}"`;
     $("rows").innerHTML = rows.map((r) => `<tr ${attr(r)} tabindex="0">${cols.map(([, , cls, cell]) => `<td class="${cls}">${cell(r)}</td>`).join("")}</tr>`).join("")
       || `<tr><td colspan="${cols.length}" class="empty">${F.tab === "teams" && f.u && !np ? `No synced teams under “${esc(f.u)}” yet — <a href="/connect">add your teams</a>.` : "Nothing matches."}</td></tr>`;
     $("more").hidden = rows.length >= data.total;
@@ -221,10 +217,9 @@
     if (u) return set({ u: u.dataset.user });
     const tr = target.closest("tr"); if (!tr) return;
     if (tr.dataset.id) openTeam(tr.dataset.id);
-    // a player → the teams that have him; a user → all of their teams. Filters that were not visible on the tab
-    // being left (an old player pick, "advancing only") are dropped so the rows match what was clicked
+    // a player → the teams that have him. "Advancing only" is not visible on the Players tab, so it is dropped
+    // and the rows match what was clicked
     else if (tr.dataset.player) set({ tab: "teams", p: tr.dataset.player, adv: "", sort: "", dir: "" });
-    else if (tr.dataset.account) set({ tab: "teams", u: tr.dataset.account, p: "", adv: "", sort: "", dir: "" });
   }
   $("rows").addEventListener("click", (e) => { if (!e.target.closest("a")) rowClick(e.target); });
   $("rows").addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.matches("tr")) rowClick(e.target); });
