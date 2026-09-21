@@ -1,7 +1,7 @@
 // Build the public app page from the single-user dashboard template, so both sites share one UI:
 //   ../tools/dashboard-template.html  →  public/app.html (markup + CSS) and public/app.js (the page script)
-// The page script is unchanged except for where its data comes from (window.__DK, set by boot.js after
-// sign-in, instead of JSON baked into the file) and the partner / local-tooling bits the public version
+// The page script is unchanged except for where its data comes from (window.__DK, set by boot.js from the
+// username in the address, instead of JSON baked into the file) and the partner / local-tooling bits the public version
 // does not have. Every edit below must match exactly once — a template change that breaks one fails the build.
 import fs from "node:fs";
 import path from "node:path";
@@ -21,12 +21,11 @@ function swap(where, from, to, label) {
 
 // ---- markup ----
 html = swap(html, "<title>DK Best Ball Portfolio</title>", "<title>dkbbdb</title>", "title");
-html = swap(html, "<h1>DK Best Ball Portfolio</h1>", `<h1>dkbbdb</h1>`, "h1");
-html = swap(html, `<button class="btn" id="exportCsv">`, `<a class="btn" href="/connect" style="text-decoration:none">Sync teams</a>\n  <button class="btn" id="exportCsv">`, "header sync link");
-html = swap(html, `<button class="btn" id="exportJson">Export JSON</button>`, `<button class="btn" id="exportJson">Export JSON</button>\n  <div id="userBtn" style="margin-left:10px"></div>`, "header user button");
+html = swap(html, "<h1>DK Best Ball Portfolio</h1>", `<h1><a href="/" style="color:inherit;text-decoration:none">dkbbdb</a> <span id="who" style="font-weight:400;color:var(--ink-2)"></span></h1>`, "h1");
+html = swap(html, `<button class="btn" id="exportCsv">`, `<a class="btn" href="/" style="text-decoration:none">Search a username</a>\n  <a class="btn" href="/connect" style="text-decoration:none">Add your teams</a>\n  <button class="btn" id="exportCsv">`, "header links");
 html = swap(html, "</style>", `
 /* public version: no partner features, no local-tooling tab */
-nav.tabs button[data-tab="partners"], nav.tabs button[data-tab="debug"], [data-sf="shared"],
+nav.tabs button[data-tab="partners"], nav.tabs button[data-tab="debug"], [data-sf="shared"], [data-sf="manual"],
 #seasonTable [data-key="partners"] { display: none !important; }
 </style>`, "css");
 
@@ -34,7 +33,7 @@ nav.tabs button[data-tab="partners"], nav.tabs button[data-tab="debug"], [data-s
 js = swap(js, `const DK = JSON.parse(document.getElementById("dk-data").textContent);`, `const DK = window.__DK; // set by boot.js from /api/portfolio`, "DK source");
 js = swap(js,
   `const res = await fetch("live/", { headers: LIVE.etag ? { "If-None-Match": LIVE.etag } : {}, cache: "no-store", credentials: "same-origin" });`,
-  `const res = await fetch("/api/live", { headers: { ...(LIVE.etag ? { "If-None-Match": LIVE.etag } : {}), Authorization: "Bearer " + await window.dkbbToken() }, cache: "no-store" });`,
+  `const res = await fetch(window.dkbbLiveUrl(), { headers: LIVE.etag ? { "If-None-Match": LIVE.etag } : {}, cache: "no-cache" });`,
   "live fetch");
 js = swap(js, `applyLive(await res.json());`, `applyLive(window.dkbbExpand(await res.json()));`, "expand compact view");
 js = swap(js,

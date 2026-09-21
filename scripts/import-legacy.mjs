@@ -1,8 +1,9 @@
 // One-off: load the single-user SQLite portfolio (../data/portfolio.sqlite) into the multi-user database
 // THROUGH THE SAME CODE PATH AS AN EXTENSION UPLOAD (lib/ingest.js), one upload per DraftKings account.
-// Every DK username becomes its own unclaimed site user (email "legacy:<username>") — claim one for a real
-// sign-in with scripts/claim.mjs. Rosters are cross-checked against the old leaderboard + roster sync.
+// Every DK username becomes a searchable account (dkbbdb.com/u/<username>). Rosters are cross-checked against
+// the old leaderboard + roster sync.
 //   node scripts/import-legacy.mjs [--reset]     --reset: empty every table first
+import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { connect, ROOT } from "./db.mjs";
@@ -14,8 +15,9 @@ const lite = new Database(path.join(ROOT, "..", "data", "portfolio.sqlite"), { r
 const db = await connect();
 
 if (process.argv.includes("--reset")) {
-  await db.query("truncate users, dk_accounts, sync_tokens, contests, pod_teams, entries, draftables, rank_history restart identity cascade");
-  console.log("all tables emptied (sleeper_map kept)");
+  await db.query("drop table if exists rank_history, entries, pod_teams, contests, dk_accounts, sync_tokens, users, draftables cascade");
+  await db.query(fs.readFileSync(path.join(ROOT, "db", "schema.sql"), "utf8"));
+  console.log("tables recreated from db/schema.sql (sleeper_map kept)");
 }
 
 const draftables = {}, adp = {};
@@ -30,17 +32,14 @@ for (const d of lite.prepare("select my_username, raw_contest, raw_draft_status 
 
 let first = true;
 for (const [username, drafts] of byUser) {
-  const email = `legacy:${username}`;
-  const userId = (await db.query("select id from users where email = $1", [email])).rows[0]?.id
-    ?? (await db.query("insert into users (email) values ($1) returning id", [email])).rows[0].id;
   // chunked like the extension will (keeps every request small)
   const total = { drafts: 0, pods: 0, teams: 0, errors: [] };
   for (let i = 0; i < drafts.length; i += 25) {
-    const r = await ingestDrafts(db, userId, { drafts: drafts.slice(i, i + 25), ...(first ? { draftables, adp } : {}) });
+    const r = await ingestDrafts(db, { drafts: drafts.slice(i, i + 25), ...(first ? { draftables, adp } : {}) });
     first = false;
     total.drafts += r.drafts; total.pods += r.pods; total.teams += r.teams; total.errors.push(...r.errors);
   }
-  console.log(`${username} → user ${userId}: ${total.drafts} teams, ${total.pods} pods, ${total.teams} pod teams${total.errors.length ? `, errors: ${total.errors.join(" | ")}` : ""}`);
+  console.log(`${username}: ${total.drafts} teams, ${total.pods} pods, ${total.teams} pod teams${total.errors.length ? `, errors: ${total.errors.join(" | ")}` : ""}`);
 }
 
 // cross-check: does the draft board give the same 20 players the old opponent sync found?

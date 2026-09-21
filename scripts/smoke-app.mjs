@@ -10,27 +10,28 @@ import { userView } from "../lib/view.js";
 const { JSDOM } = createRequire(path.join(ROOT, "..", "package.json"))("jsdom");
 process.env.DATABASE_URL ??= loadEnv().DATABASE_URL;
 const db = await connect();
-const u = (await db.query("select user_id from dk_accounts where lower(username) = lower($1)", [process.argv[2] ?? "kknox20"])).rows[0];
-const [portfolio, view] = [await userPortfolio(db, u.user_id), (await userView(db, u.user_id)).body];
+const names = (process.argv[2] ?? "kknox20").toLowerCase().split(",");
+const keys = (await db.query("select user_key from dk_accounts where lower(username) = any($1::text[])", [names])).rows.map((r) => r.user_key);
+const [portfolio, view] = [await userPortfolio(db, keys), (await userView(db, keys)).body];
 await db.end();
 
 const html = fs.readFileSync(path.join(ROOT, "public", "app.html"), "utf8").replace(`<script src="/boot.js"></script>`, "");
 const errors = [];
-const dom = new JSDOM(html, { runScripts: "outside-only", url: "https://dkbbdb.com/app", pretendToBeVisual: true });
+const dom = new JSDOM(html, { runScripts: "outside-only", url: "https://dkbbdb.com/u/" + names.join(","), pretendToBeVisual: true });
 const w = dom.window;
 w.addEventListener("error", (e) => errors.push(e.message));
 w.console.error = (...a) => errors.push(a.join(" "));
 w.matchMedia ??= () => ({ matches: false, addEventListener() {}, addListener() {} });
 w.__DK = portfolio;
-w.dkbbToken = async () => "test";
+w.dkbbLiveUrl = () => "/api/live?u=" + names.join(",");
 // the real expander from boot.js (evaluated alone: boot.js itself needs Clerk)
 {
   const boot = fs.readFileSync(path.join(ROOT, "public", "boot.js"), "utf8");
-  const from = boot.indexOf("window.dkbbExpand ="), to = boot.indexOf("window.dkbbToken =");
+  const from = boot.indexOf("window.dkbbExpand ="), to = boot.indexOf("window.dkbbLiveUrl =");
   w.eval(boot.slice(from, to));
 }
 let liveCalls = 0;
-w.fetch = async (url, init) => { liveCalls++; if (url !== "/api/live" || init.headers.Authorization !== "Bearer test") throw new Error("unexpected fetch " + url);
+w.fetch = async (url, init) => { liveCalls++; if (!url.startsWith("/api/live?u=") || init.headers.Authorization) throw new Error("unexpected fetch " + url);
   return { status: 200, ok: true, headers: { get: () => '"x"' }, json: async () => JSON.parse(JSON.stringify(view)) }; };
 w.eval(fs.readFileSync(path.join(ROOT, "public", "app.js"), "utf8"));
 await new Promise((r) => setTimeout(r, 1500));
@@ -39,7 +40,7 @@ const d = w.document, checks = [];
 const ok = (name, cond, extra = "") => { checks.push(cond); console.log(cond ? "  ok  " : "  FAIL", name, extra); };
 const rows = d.querySelectorAll("#seasonTable tbody tr");
 ok("season rows = teams", rows.length === portfolio.drafts.length, `${rows.length}/${portfolio.drafts.length}`);
-ok("live feed fetched with the bearer token", liveCalls >= 1);
+ok("live feed fetched by username, no credentials", liveCalls >= 1);
 ok("points rendered to 2 decimals", /\d+\.\d\d/.test(rows[0]?.textContent ?? ""), rows[0]?.textContent.replace(/\s+/g, " ").slice(0, 90));
 ok("header says live", /live/.test(d.getElementById("genInfo").textContent), d.getElementById("genInfo").textContent);
 const cards = [...d.querySelectorAll("#seasonCards .card .k")].map((x) => x.textContent);

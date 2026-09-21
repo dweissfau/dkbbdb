@@ -26,6 +26,9 @@
       ]
     }
   ],
+  "rewrites": [
+    { "source": "/u/:name", "destination": "/app" }
+  ],
   "redirects": [
     {
       "source": "/(.*)",

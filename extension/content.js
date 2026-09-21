@@ -2,7 +2,7 @@
 //   1. Reads the `var contests = {...}` blob already embedded in the page (your own entries).
 //   2. For every Best Ball entry dkbbdb does not have yet, fetches its draft board (draftStatus) with your
 //      signed-in DraftKings session: the same request the site itself makes.
-//   3. Uploads the result to your dkbbdb.com account (background worker + your sync token).
+//   3. Uploads the result to dkbbdb.com (no account: your page is dkbbdb.com/u/<your DraftKings username>).
 // No credentials are read or stored. One draft board lists all 12 teams, so nothing else is requested.
 
 (() => {
@@ -165,12 +165,8 @@
   btn.addEventListener("click", async () => {
     btn.disabled = true; link.style.display = "none";
     // what dkbbdb already has: finished pods are never fetched again, only their status is refreshed
-    const known = await bg({ type: "KNOWN" });
-    if (!known?.ok) {
-      status.textContent = known?.status === 401 ? "This extension is not connected to a dkbbdb account yet." : `Could not reach dkbbdb: ${known?.error ?? "unknown error"}`;
-      if (known?.status === 401) showLink("Connect at dkbbdb.com/connect ↗", "https://dkbbdb.com/connect");
-      btn.disabled = false; return;
-    }
+    const known = await bg({ type: "KNOWN", entries: bestBall.map((c) => c.UserContestId) });
+    if (!known?.ok) { status.textContent = `Could not reach dkbbdb: ${known?.error ?? "unknown error"}`; btn.disabled = false; return; }
     const complete = new Set((known.complete ?? []).map(String)), haveGroups = new Set((known.draftGroups ?? []).map(String));
     const todo = bestBall.filter((c) => !complete.has(String(c.UserContestId)));
     const drafts = bestBall.filter((c) => complete.has(String(c.UserContestId))).map((c) => ({ contest: trimContest(c) }));
@@ -200,19 +196,23 @@
       if (r.json?.draftables) draftables[g] = r.json.draftables.map((d) => [d.draftableId, d.playerId ?? null, d.displayName ?? null, d.position ?? null, d.teamAbbreviation ?? null]);
     }
 
-    const serverErrors = [];
+    const serverErrors = [], usernames = new Set(known.usernames ?? []);
     const chunks = Math.max(1, Math.ceil(drafts.length / CHUNK));
     for (let i = 0; i < chunks; i++) {
       status.textContent = `Uploading… (${i + 1} of ${chunks})`;
       const body = { drafts: drafts.slice(i * CHUNK, (i + 1) * CHUNK), last: i === chunks - 1, ...(i === 0 ? { adp, draftables } : {}) };
-      const r = await bg({ type: "UPLOAD", body, summary: teamsTxt(bestBall.length) });
+      const r = await bg({ type: "UPLOAD", body });
       if (!r?.ok) { status.textContent = `Upload failed: ${r?.error ?? "unknown error"}\nClick Sync to try again.`; btn.disabled = false; return; }
       serverErrors.push(...(r.errors ?? []));
+      for (const n of r.usernames ?? []) usernames.add(n);
     }
     const problems = [...errors, ...serverErrors];
     status.textContent = `Done — ${teamsTxt(bestBall.length)} on dkbbdb (${todo.length} new or updated).` +
       (problems.length ? `\n${problems.length} problem${problems.length === 1 ? "" : "s"}:\n${problems.slice(0, 4).join("\n")}` : "");
-    showLink("Open my teams on dkbbdb ↗", "https://dkbbdb.com/app");
+    const names = [...usernames];
+    bg({ type: "SYNCED", usernames: names, teams: bestBall.length });
+    if (names.length) showLink(`Open ${names[0]} on dkbbdb ↗`, `https://dkbbdb.com/u/${encodeURIComponent(names[0])}`);
+    else showLink("Open dkbbdb ↗", "https://dkbbdb.com/");
     btn.disabled = false;
   });
 })();

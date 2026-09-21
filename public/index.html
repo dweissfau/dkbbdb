@@ -4,26 +4,59 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>dkbbdb — best ball portfolio tracker</title>
-<meta name="description" content="Track every DraftKings best ball team you drafted: live scores, the advance line, league standings and rosters, player exposure.">
+<meta name="description" content="Look up a DraftKings best ball portfolio by username: live scores, the advance line, league standings and rosters, player exposure.">
 <link rel="stylesheet" href="/site.css">
 </head>
-<body data-page="home">
+<body>
 <main class="page">
   <h1 class="brand">dkbbdb</h1>
   <p class="lead">Every best ball team you drafted on DraftKings, in one place — scored live, all season.</p>
-  <p><a class="cta" id="cta" href="/app">Sign in</a></p>
+
+  <form class="find" id="find" autocomplete="off">
+    <input id="q" type="search" placeholder="DraftKings username" aria-label="DraftKings username" spellcheck="false" autocapitalize="off" autofocus>
+    <button class="cta" type="submit">See teams</button>
+    <div class="hits" id="hits" hidden></div>
+  </form>
+  <p class="muted">Not listed? <a href="/connect">Add your teams</a> — it takes about a minute, no sign-up.</p>
 
   <div class="grid">
     <div class="tile"><h2>Live scores, no refresh</h2><p>Every team updates play by play from public NFL stats using DraftKings scoring. Your computer can be off.</p></div>
     <div class="tile"><h2>The advance line</h2><p>See which teams are advancing and exactly how many points the rest are out by, sorted by what is at stake.</p></div>
     <div class="tile"><h2>Every league, every roster</h2><p>Open a team to see the full 12-team standings, any opponent's lineup, and scores week by week.</p></div>
-    <div class="tile"><h2>Who has him?</h2><p>Type a player's name to see every team of yours with him, and every league where an opponent has him.</p></div>
-    <div class="tile"><h2>Exposure and balance</h2><p>Your ownership of every player across the portfolio, against ADP, by position and by draft date.</p></div>
-    <div class="tile"><h2>Set up in a minute</h2><p>Install the browser extension, open your DraftKings contests page and click Sync. We never see your DraftKings password.</p></div>
+    <div class="tile"><h2>Who has him?</h2><p>Type a player's name to see every team with him, and every league where an opponent has him.</p></div>
+    <div class="tile"><h2>Exposure and balance</h2><p>Ownership of every player across the portfolio, against ADP, by position and by draft date.</p></div>
+    <div class="tile"><h2>No account needed</h2><p>Install the browser extension, open your DraftKings contests page and click Sync. We never see your DraftKings password.</p></div>
   </div>
 
   <footer>Independent tool — not affiliated with, endorsed by, or sponsored by DraftKings. DraftKings is a trademark of its owner.</footer>
 </main>
-<script src="/boot.js"></script>
+<script>
+(() => {
+  const q = document.getElementById("q"), hits = document.getElementById("hits");
+  const go = (name) => { location.href = "/u/" + encodeURIComponent(name.trim()); };
+  let timer = 0, seq = 0;
+  q.addEventListener("input", () => {
+    clearTimeout(timer);
+    const s = q.value.trim();
+    if (s.length < 2) { hits.hidden = true; return; }
+    timer = setTimeout(async () => {
+      const mine = ++seq;
+      try {
+        const { results } = await (await fetch("/api/search?q=" + encodeURIComponent(s))).json();
+        if (mine !== seq) return;
+        hits.replaceChildren(...results.map((r) => {
+          const b = document.createElement("button");
+          b.type = "button"; b.textContent = r.username;
+          const n = document.createElement("span"); n.textContent = `${r.teams} team${r.teams === 1 ? "" : "s"}`;
+          b.append(n); b.onclick = () => go(r.username);
+          return b;
+        }));
+        hits.hidden = !results.length;
+      } catch { hits.hidden = true; }
+    }, 180);
+  });
+  document.getElementById("find").addEventListener("submit", (e) => { e.preventDefault(); if (q.value.trim()) go(q.value); });
+})();
+</script>
 </body>
 </html>

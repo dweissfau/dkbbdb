@@ -1305,7 +1305,7 @@ function applyLive(v) {
 async function pollLive() {
   if (document.visibilityState === "hidden") return;
   try {
-    const res = await fetch("/api/live", { headers: { ...(LIVE.etag ? { "If-None-Match": LIVE.etag } : {}), Authorization: "Bearer " + await window.dkbbToken() }, cache: "no-store" });
+    const res = await fetch(window.dkbbLiveUrl(), { headers: LIVE.etag ? { "If-None-Match": LIVE.etag } : {}, cache: "no-cache" });
     if (res.status === 304) { LIVE.ok = true; return; }
     if (!res.ok) { LIVE.ok = false; return; }
     LIVE.etag = res.headers.get("etag");

@@ -2,29 +2,16 @@
 -- Scores are NOT stored: they are computed on the server from public NFL stats (lib/pubscore.js),
 -- so the database only has to know who drafted whom in which pod.
 
-create table if not exists users (
-  id          bigserial primary key,
-  clerk_id    text unique,              -- null = imported before the person signed up (claimable)
-  email       text,
-  created_at  timestamptz not null default now()
-);
-
--- one site user can own several DraftKings accounts
+-- A DraftKings account whose owner synced it with the extension. There are no site accounts: like bbmdb,
+-- anyone can look a username up — but ONLY usernames in this table (people who synced themselves), never
+-- the opponents who merely appear in their pods.
 create table if not exists dk_accounts (
   user_key    text primary key,         -- DK userKey (stable per DK account)
-  user_id     bigint not null references users(id) on delete cascade,
   username    text,
-  created_at  timestamptz not null default now()
+  created_at  timestamptz not null default now(),
+  synced_at   timestamptz not null default now()
 );
-
--- extension pairing: the extension holds the token, the server only its SHA-256
-create table if not exists sync_tokens (
-  token_hash   text primary key,
-  user_id      bigint not null references users(id) on delete cascade,
-  label        text,
-  created_at   timestamptz not null default now(),
-  last_used_at timestamptz
-);
+create index if not exists dk_accounts_username on dk_accounts (lower(username));
 
 -- one row per pod (a DK "contest" is a single 12-team draft). Shared by every user in it.
 create table if not exists contests (
@@ -51,24 +38,23 @@ create table if not exists pod_teams (
   user_key       text not null,
   username       text,
   seat           int,                   -- draft slot, 1-based
-  entry_key      bigint,                -- DK entry id when known (always known for a site user's own team)
+  entry_key      bigint,                -- DK entry id when known (always known for a synced account's own team)
   draftable_ids  int[] not null,        -- in pick order
   pick_numbers   int[] not null,        -- overall selection number, aligned with draftable_ids
   primary key (contest_id, user_key)
 );
 create index if not exists pod_teams_username on pod_teams (lower(username));
 
--- a site user's own teams
+-- the synced accounts' own teams
 create table if not exists entries (
   entry_id     bigint primary key,      -- DK UserContestId
-  user_id      bigint not null references users(id) on delete cascade,
-  user_key     text not null,
+  user_key     text not null references dk_accounts(user_key) on delete cascade,
   contest_id   bigint not null references contests(contest_id),
   state        text,                    -- upcoming | live | history
   prizes       numeric,                 -- official PrizesWon, when DK reports it
   synced_at    timestamptz not null default now()
 );
-create index if not exists entries_user on entries (user_id);
+create index if not exists entries_user_key on entries (user_key);
 create index if not exists entries_contest on entries (contest_id);
 
 -- public DK player list per draft group (names / positions / teams / ADP at sync time)

@@ -1,29 +1,37 @@
-// End-to-end check of the deployed upload path, as the extension would use it, for an existing user:
-// issues a temporary sync token, GET /api/sync, re-uploads one real draft + one status-only draft, deletes the token.
+// End-to-end check of the deployed site the way the extension and a visitor use it (no accounts):
+// POST /api/known, re-upload one real draft + one status-only draft, then search → portfolio → live.
 //   node scripts/test-sync-prod.mjs <dk username> [site]
 import path from "node:path";
 import { createRequire } from "node:module";
-import { connect, ROOT } from "./db.mjs";
-import { issueSyncToken } from "../lib/auth.js";
+import { ROOT } from "./db.mjs";
 import { compactStatus } from "../lib/ingest.js";
 
-const [username = "ZBbih", site = "https://dkbbdb.vercel.app"] = process.argv.slice(2);
+const [username = "ZBbih", site = "https://dkbbdb.com"] = process.argv.slice(2);
 const lite = new (createRequire(path.join(ROOT, "..", "package.json"))("better-sqlite3"))(path.join(ROOT, "..", "data", "portfolio.sqlite"), { readonly: true });
-const db = await connect();
-const userId = (await db.query("select user_id from dk_accounts where lower(username) = lower($1)", [username])).rows[0].user_id;
-const token = await issueSyncToken(db, userId, "test");
-const call = async (method, body) => { const r = await fetch(`${site}/api/sync`, { method, headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: body && JSON.stringify(body) }); return [r.status, await r.json()]; };
-try {
-  const [s1, known] = await call("GET");
-  console.log("GET", s1, "complete", known.complete?.length, "draftGroups", known.draftGroups);
-  const rows = lite.prepare("select raw_contest, raw_draft_status from drafts where my_username = ? limit 2").all(username);
-  const drafts = [{ contest: JSON.parse(rows[0].raw_contest), ...compactStatus(JSON.parse(rows[0].raw_draft_status)) }, { contest: JSON.parse(rows[1].raw_contest) }];
-  const t0 = Date.now();
-  const [s2, out] = await call("POST", { drafts, last: true });
-  console.log("POST", s2, JSON.stringify(out), `${Date.now() - t0} ms`);
-  const [s3] = await fetch(`${site}/api/sync`, { headers: { Authorization: "Bearer dkbb_" + "x".repeat(32) } }).then((r) => [r.status]);
-  console.log("bad token →", s3);
-} finally {
-  await db.query("delete from sync_tokens where user_id = $1", [userId]);
-  await db.end();
-}
+const post = async (p, body, headers = {}) => { const r = await fetch(site + p, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) }); return [r.status, await r.json()]; };
+const get = async (p, headers = {}) => { const r = await fetch(site + p, { headers }); return [r.status, r.status === 304 ? null : await r.json(), r.headers]; };
+
+const rows = lite.prepare("select entry_id, raw_contest, raw_draft_status from drafts where my_username = ? limit 2").all(username);
+const [s1, known] = await post("/api/known", { entries: rows.map((r) => r.entry_id) });
+console.log("known", s1, "complete", known.complete?.length, "of", rows.length, "· usernames", known.usernames, "· draftGroups", known.draftGroups);
+
+const drafts = [{ contest: JSON.parse(rows[0].raw_contest), ...compactStatus(JSON.parse(rows[0].raw_draft_status)) }, { contest: JSON.parse(rows[1].raw_contest) }];
+const [s2] = await post("/api/sync", { drafts, last: true });
+console.log("upload without the extension header →", s2);
+const t0 = Date.now();
+const [s3, out] = await post("/api/sync", { drafts, last: true }, { "x-dkbbdb-extension": "test" });
+console.log("upload", s3, JSON.stringify(out), `${Date.now() - t0} ms`);
+
+const [s4, found] = await get("/api/search?q=" + encodeURIComponent(username.slice(0, 3)));
+console.log("search", s4, JSON.stringify(found.results));
+const [s5, pf] = await get("/api/portfolio?u=" + encodeURIComponent(username));
+console.log("portfolio", s5, "teams", pf.drafts?.length, "picks", pf.picks?.length, "accounts", pf.me?.accounts);
+const [s6, live, h] = await get("/api/live?u=" + encodeURIComponent(username));
+console.log("live", s6, "teams", Object.keys(live.status ?? {}).length, "week", live.week, "weeks", JSON.stringify(live.weekly?.weeks), "cache", h.get("cache-control"));
+const [s7] = await get("/api/live?u=" + encodeURIComponent(username), { "if-none-match": h.get("etag") });
+console.log("live again with the ETag →", s7);
+const [s8] = await get("/api/portfolio?u=nobody-by-this-name");
+const [s9] = await get("/api/live?u=nobody-by-this-name");
+console.log("unknown username →", s8, s9);
+const page = await fetch(`${site}/u/${encodeURIComponent(username)}`);
+console.log("page /u/" + username, page.status, /boot\.js/.test(await page.text()) ? "serves the app" : "NOT the app");
