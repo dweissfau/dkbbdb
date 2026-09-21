@@ -78,22 +78,25 @@
     // active username / player filters
     const chips = [];
     if (f.u) chips.push(`<span class="tag">${esc(f.u)}<button data-clear="u" aria-label="Clear username">✕</button></span><a class="sub" href="/u/${encodeURIComponent(f.u)}">full portfolio: exposure, balance →</a>`);
-    if (f.p) chips.push(`<span class="tag"><b class="pos ${esc(f.p.pos)}">${esc(f.p.pos)}</b>${esc(f.p.name)} <i>${esc(f.p.team ?? "")}</i><button data-clear="p" aria-label="Clear player">✕</button></span>`);
+    for (const p of f.p) chips.push(`<span class="tag"><b class="pos ${esc(p.pos)}">${esc(p.pos)}</b>${esc(p.name)} <i>${esc(p.team ?? "")}</i><button data-clear="p" data-id="${p.id}" aria-label="Remove ${esc(p.name)}">✕</button></span>`);
+    if (f.p.length && f.p.length < 5) chips.push(`<span class="sub" style="color:var(--muted)">add another player to see teams with ${f.p.length === 1 ? "both" : "all of them"}</span>`);
     $("active").innerHTML = chips.join(""); $("active").hidden = !chips.length;
 
     // summary cards: the player's numbers against the field he is measured in (tournament / username filters)
     const fieldRate = pct(s.fieldAdvancing, s.fieldRanked);
-    const cards = f.p
-      ? [["Teams with him", s.count.toLocaleString(), `of ${s.field.toLocaleString()} team${s.field === 1 ? "" : "s"}${f.t ? " in this tournament" : ""}${f.u ? ` of ${f.u}` : ""}`],
-         ["Ownership", pct(s.count, s.field), "share of those teams that drafted him"],
+    const np = f.p.length, them = np === 1 ? "him" : np === 2 ? "both" : `all ${np}`;
+    const names = np ? f.p.map((p) => p.name).join(" + ") : "";
+    const cards = np
+      ? [[`Teams with ${them}`, s.count.toLocaleString(), `of ${s.field.toLocaleString()} team${s.field === 1 ? "" : "s"}${f.t ? " in this tournament" : ""}${f.u ? ` of ${f.u}` : ""}`],
+         ["Ownership", pct(s.count, s.field), `share of those teams that drafted ${them}`],
          ["Advance rate", pct(s.advancing, s.ranked), `all teams: ${fieldRate}`],
-         ["Advancing", s.advancing.toLocaleString(), `of his ${s.count.toLocaleString()} team${s.count === 1 ? "" : "s"} are inside the cutoff now`]]
+         ["Advancing", s.advancing.toLocaleString(), `of the ${s.count.toLocaleString()} team${s.count === 1 ? "" : "s"} with ${them} are inside the cutoff now`]]
       : [["Teams", s.count.toLocaleString(), f.u ? `synced by ${f.u}` : `from ${data.accounts.toLocaleString()} account${data.accounts === 1 ? "" : "s"}`],
          ["Advancing", s.advancing.toLocaleString(), "inside their league's cutoff now"],
          ["Advance rate", fieldRate, "of teams with a league place"]];
     $("cards").innerHTML = cards.map(([k, v, d]) => `<div class="card"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="d">${esc(d)}</div></div>`).join("");
 
-    $("title").textContent = f.p ? `Teams with ${f.p.name}` : f.u ? `${f.u}'s teams` : "Leaderboard";
+    $("title").textContent = np ? `Teams with ${names}` : f.u ? `${f.u}'s teams` : "Leaderboard";
     $("count").textContent = `${data.total.toLocaleString()} team${data.total === 1 ? "" : "s"} · season points`;
     $("rows").innerHTML = rows.map((t) => `<tr data-id="${esc(t.id)}" tabindex="0">
       <td class="rk num">${t.n}</td>
@@ -102,7 +105,7 @@
       <td class="num col-buyin">${t.buyIn == null ? "—" : "$" + t.buyIn.toLocaleString()}</td>
       <td class="col-place">${t.rank ?? "—"} / ${t.entrants ?? "—"}${t.adv ? `<span class="chip">Advancing</span>` : ""}</td>
       <td class="num"><b>${pts(t.points)}</b></td></tr>`).join("")
-      || `<tr><td colspan="6" class="empty">${f.u && !f.p ? `No synced teams under “${esc(f.u)}” yet — <a href="/connect">add your teams</a>.` : "No teams match."}</td></tr>`;
+      || `<tr><td colspan="6" class="empty">${f.u && !np ? `No synced teams under “${esc(f.u)}” yet — <a href="/connect">add your teams</a>.` : "No teams match."}</td></tr>`;
     $("more").hidden = rows.length >= data.total;
     renderNote();
   }
@@ -126,8 +129,13 @@
 
   $("fT").addEventListener("change", (e) => setFilter("t", e.target.value));
   window.dkbbSuggest($("fU"), "user", (r) => setFilter("u", r.username));
-  window.dkbbSuggest($("fP"), "player", (r) => setFilter("p", String(r.id)));
-  $("active").addEventListener("click", (e) => { const b = e.target.closest("[data-clear]"); if (b) setFilter(b.dataset.clear, ""); });
+  // players add up: each pick narrows the table to teams that have ALL of them (at most 5)
+  const pids = () => F.p.split(",").filter(Boolean);
+  window.dkbbSuggest($("fP"), "player", (r) => setFilter("p", [...new Set([...pids(), String(r.id)])].slice(0, 5).join(",")));
+  $("active").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-clear]"); if (!b) return;
+    setFilter(b.dataset.clear, b.dataset.id ? pids().filter((id) => id !== b.dataset.id).join(",") : "");
+  });
   $("moreBtn").addEventListener("click", () => { shown += PAGE; load(true); });
 
   // a row opens that team's league view — the same pop-up as on the portfolio pages (boot.js team mode)

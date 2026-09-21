@@ -28,6 +28,13 @@ ok("player stats are consistent", byP.stats.advancing <= byP.stats.count && byP.
   `ownership ${(100 * byP.stats.count / byP.stats.field).toFixed(1)}% · advancing ${byP.stats.advancing} · advance rate ${(100 * byP.stats.advancing / byP.stats.ranked).toFixed(1)}% (all teams ${(100 * byP.stats.fieldAdvancing / byP.stats.fieldRanked).toFixed(1)}%)`);
 const combo = await leaderboard(db, { p: p.id, u: "kknox20", t });
 ok("filters combine (player within username + tournament)", combo.stats.field === (await leaderboard(db, { u: "kknox20", t })).total && combo.total <= byP.total, `${combo.total} of ${combo.stats.field}`);
+// two players at once = teams that have BOTH
+const [a, b2] = [(await searchPlayers(db, "jaxon smith"))[0], (await searchPlayers(db, "brock bowers"))[0]];
+const [onlyA, onlyB, both] = [await leaderboard(db, { p: a.id, limit: 200 }), await leaderboard(db, { p: b2.id, limit: 200 }), await leaderboard(db, { p: `${a.id},${b2.id}`, limit: 200 })];
+const idsB = new Set(onlyB.rows.map((r) => r.id)), expect = onlyA.rows.filter((r) => idsB.has(r.id)).map((r) => r.id).sort().join();
+ok("two players = intersection of each one's teams", both.rows.map((r) => r.id).sort().join() === expect && both.filter.p.length === 2 && both.stats.field === all.teams,
+  `${a.name} ${onlyA.total} · ${b2.name} ${onlyB.total} · both ${both.total} (advancing ${both.stats.advancing})`);
+ok("order of the ids does not matter; junk ids are ignored", (await leaderboard(db, { p: `${b2.id}, ${a.id},abc,-4` })).total === both.total);
 const page2 = await leaderboard(db, { offset: 100, limit: 50 });
 ok("paging", page2.rows[0]?.n === 101 && page2.rows.length === 50 && page2.rows[0].id === all.rows[100].id);
 
