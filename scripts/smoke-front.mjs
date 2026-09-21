@@ -26,6 +26,7 @@ ok("sort by cut line", /▼/.test(d.querySelector('th[data-sort="gap"]').textCon
 d.getElementById("advOnly").checked = true; d.getElementById("advOnly").dispatchEvent(new w.Event("change", { bubbles: true })); await wait();
 ok("advancing only", rows().length > 0 && rows().every((r) => /Advancing/.test(r.textContent)), `${rows().length} rows`);
 click(d.querySelector('[data-tab="players"]')); await wait();
+ok("position buttons are visible on desktop", w.getComputedStyle(d.querySelector('[data-pos="QB"]')).display !== "none");
 ok("players tab", rows().length === 100 && heads().some((h) => /Ownership/.test(h)) && !d.getElementById("posPills").hidden && d.getElementById("fP").hidden, heads().join(" | "));
 click(d.querySelector('[data-pos="TE"]')); await wait();
 ok("position pill", rows().every((r) => r.querySelector(".pos")?.textContent === "TE"), `${rows().length} TEs, top ${rows()[0]?.querySelector(".pname")?.textContent}`);

@@ -104,7 +104,7 @@ footer a { color: inherit; }
 .hello b { color: var(--ink); }
 .hello button { background: none; border: none; color: var(--muted); font: inherit; cursor: pointer; padding: 0 4px; margin-left: auto; }
 .hello button:hover { color: var(--ink); }
-.pill.sm { padding: 2px 10px; font-size: 12.5px; }
+.pill.mini { padding: 2px 10px; font-size: 12.5px; }
 .check { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 13px; cursor: pointer; user-select: none; }
 .check input { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; }
 th.sortable { cursor: pointer; user-select: none; }
