@@ -3,8 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>dkbbdb</title>
-<meta name="description" content="DraftKings best ball leaderboard, scored live: filter by tournament, username or player, and open any team's league and roster.">
+<title>dkbbdb — DraftKings best ball leaderboard</title>
+<meta name="description" content="A live-scored leaderboard of DraftKings best ball teams: filter by tournament, username or player, see ownership and advance rates, and open any team's league and roster.">
+<meta property="og:title" content="dkbbdb — DraftKings best ball leaderboard">
+<meta property="og:description" content="Live-scored best ball teams: ownership, advance rates, every league and roster. Add your teams in a minute, no sign-up.">
+<meta property="og:image" content="https://dkbbdb.com/og.png">
+<meta property="og:url" content="https://dkbbdb.com/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.png">
 <link rel="stylesheet" href="/site.css">
 </head>
@@ -15,6 +21,11 @@
   <a class="btn primary" href="/connect">Add your teams</a>
 </div>
 <main>
+  <div class="hello" id="hello" hidden>
+    <span><b>dkbbdb</b> is a live leaderboard of DraftKings best ball teams, scored from public NFL stats. Search a username or a player, or click any team to see its league. <a href="/connect">Add your own teams</a> in about a minute — no sign-up.</span>
+    <button id="helloClose" aria-label="Dismiss">✕</button>
+  </div>
+
   <div class="filters">
     <select id="fT" aria-label="Tournament"><option value="">All tournaments</option></select>
     <form class="find" id="fU" autocomplete="off">
@@ -31,15 +42,23 @@
 
   <div class="panel">
     <div class="head">
-      <h1 id="title">Leaderboard</h1>
+      <div class="pills" id="tabs" role="tablist">
+        <button class="pill on" data-tab="teams" role="tab">Teams</button>
+        <button class="pill" data-tab="players" role="tab">Players</button>
+        <button class="pill" data-tab="users" role="tab">Users</button>
+      </div>
+      <div class="pills" id="posPills" hidden>
+        <button class="pill sm on" data-pos="">All</button><button class="pill sm" data-pos="QB">QB</button><button class="pill sm" data-pos="RB">RB</button><button class="pill sm" data-pos="WR">WR</button><button class="pill sm" data-pos="TE">TE</button>
+      </div>
+      <label class="check" id="advWrap"><input type="checkbox" id="advOnly"> Advancing only</label>
       <span class="note" id="count"></span>
       <div class="spacer"></div>
       <span class="note" id="liveNote"></span>
     </div>
     <div class="scroll-x">
       <table>
-        <thead><tr><th></th><th>User</th><th>Tournament</th><th class="num col-buyin">Buy-in</th><th class="col-place">League place</th><th class="num">Points</th></tr></thead>
-        <tbody id="rows"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+        <thead><tr id="thead"></tr></thead>
+        <tbody id="rows"><tr><td class="empty">Loading…</td></tr></tbody>
       </table>
     </div>
     <div class="more" id="more" hidden><button class="btn" id="moreBtn">Show more</button></div>
@@ -53,60 +72,91 @@
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const pts = (n) => n == null ? "—" : Number(n).toFixed(2); // DraftKings shows fantasy points to the cent
   const pct = (a, b) => b ? `${(100 * a / b).toFixed(1)}%` : "—";
+  const pc1 = (v) => v == null ? "—" : `${Number(v).toFixed(1)}%`;
+  const money = (n) => n == null ? "—" : "$" + Number(n).toLocaleString();
+  const day = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—";
   const agoTxt = (iso) => { const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000)); return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : `${(s / 3600).toFixed(1)} h ago`; };
+  const posTag = (p) => `<b class="pos ${esc(p)}">${esc(p)}</b>`;
   const PAGE = 100;
 
-  // filters live in the address (?t=&u=&p=) so a filtered leaderboard can be shared or bookmarked
+  // the whole state lives in the address, so any view can be shared or bookmarked:
+  //   ?tab=teams|players|users &t=tournament &u=username &p=playerId[,id…] &adv=1 &pos=QB &sort=&dir= &team=entryId
   const sp = new URLSearchParams(location.search);
-  const F = { t: sp.get("t") ?? "", u: sp.get("u") ?? "", p: sp.get("p") ?? "" };
+  const F = { tab: ["players", "users"].includes(sp.get("tab")) ? sp.get("tab") : "teams", t: sp.get("t") ?? "", u: sp.get("u") ?? "", p: sp.get("p") ?? "",
+    adv: sp.get("adv") === "1" ? "1" : "", pos: sp.get("pos") ?? "", sort: sp.get("sort") ?? "", dir: sp.get("dir") ?? "", team: sp.get("team") ?? "" };
   let data = null, rows = [], shown = PAGE;
 
-  const url = (offset, limit) => "/api/leaderboard?" + new URLSearchParams({ ...Object.fromEntries(Object.entries(F).filter(([, v]) => v)), offset, limit });
+  // columns per tab: [sort key | null, label, css class, cell html]
+  const gapChip = (t) => t.gap == null ? (t.adv ? `<span class="chip">Advancing</span>` : "—")
+    : t.adv ? `<span class="chip" title="points ahead of the best team outside the cut line"><span class="lg">Advancing </span>+${pts(t.gap)}</span>`
+    : `<span class="chip out" title="points behind the last team inside the cut line"><span class="lg">Out by </span><span class="sm">−</span>${pts(-t.gap)}</span>`;
+  const L = (long, short) => `<span class="lg">${long}</span><span class="sm">${short}</span>`; // header label: desktop / phone
+  const COLS = {
+    teams: [[null, "", "rk num", (t) => t.n], ["user", "User", "user", (t) => `<button class="ulink" data-user="${esc(t.user)}" title="Show only ${esc(t.user)}'s teams">${esc(t.user)}</button><div class="under sm">${esc(t.contest)}</div>`],
+      [null, "Tournament", "contest col-contest", (t) => esc(t.contest)], ["buyIn", "Buy-in", "num col-buyin", (t) => money(t.buyIn)], ["date", "Drafted", "col-date", (t) => day(t.date)],
+      ["rank", "League place", "col-place", (t) => `${t.rank ?? "—"} / ${t.entrants ?? "—"}`], ["gap", "Cut line", "", gapChip],
+      ["left", "Left", "num col-left", (t) => t.left ?? "—"], ["points", "Points", "num", (t) => `<b>${pts(t.points)}</b>`]],
+    players: [[null, "", "rk num", (r) => r.n], ["name", "Player", "user", (r) => `${posTag(r.pos)} <span class="pname">${esc(r.name)}</span> <i class="pteam">${esc(r.team ?? "")}</i>`],
+      ["teams", "Teams", "num", (r) => r.teams], ["own", L("Ownership", "Own"), "num", (r) => pc1(r.own)], ["advancing", "Advancing", "num col-buyin", (r) => r.advancing],
+      ["advRate", L("Advance rate", "Adv %"), "num", (r) => pc1(r.advRate)], ["avgPick", "Avg pick", "num col-date", (r) => r.avgPick ?? "—"]],
+    users: [[null, "", "rk num", (r) => r.n], ["user", "User", "user", (r) => `<span class="pname">${esc(r.user)}</span>`], ["teams", "Teams", "num", (r) => r.teams],
+      ["buyIns", "Buy-ins", "num col-buyin", (r) => money(r.buyIns)], ["advancing", L("Advancing", "Adv"), "num", (r) => r.advancing], ["advRate", L("Advance rate", "Adv %"), "num", (r) => pc1(r.advRate)],
+      ["best", L("Best team", "Best"), "num", (r) => `<b>${pts(r.best)}</b>`], [null, "", "contest col-date", (r) => esc(r.bestContest)]],
+  };
+  const ASC_FIRST = new Set(["user", "name", "avgPick", "rank", "date"]); // columns whose natural first click is ascending
+
+  const params = (extra) => { const q = { view: F.tab, t: F.t, sort: F.sort, dir: F.dir, ...extra };
+    if (F.tab !== "users") q.u = F.u;
+    if (F.tab === "teams") { q.p = F.p; q.adv = F.adv; }
+    if (F.tab === "players") q.pos = F.pos;
+    return new URLSearchParams(Object.entries(q).filter(([, v]) => v !== "" && v != null)); };
+  const url = (offset, limit) => "/api/leaderboard?" + params({ offset, limit });
   function pushState() {
-    const q = new URLSearchParams(Object.entries(F).filter(([, v]) => v)).toString();
+    const q = new URLSearchParams(Object.entries(F).filter(([k, v]) => v && !(k === "tab" && v === "teams"))).toString();
     history.replaceState(null, "", q ? "/?" + q : "/");
   }
 
   function render() {
-    if (!data?.live) { $("rows").innerHTML = `<tr><td colspan="6" class="empty">Scores are unavailable right now — try again in a minute.</td></tr>`; return; }
+    const cols = COLS[F.tab];
+    if (!data?.live) { $("rows").innerHTML = `<tr><td class="empty">Scores are unavailable right now — try again in a minute.</td></tr>`; return; }
     const f = data.filter, s = data.stats;
 
-    // tournament dropdown
-    const sel = $("fT"), want = F.t;
+    const sel = $("fT");
     sel.replaceChildren(new Option("All tournaments", ""), ...data.tournaments.map((t) => new Option(`${t.name} (${t.teams.toLocaleString()})`, t.name)));
-    sel.value = want;
+    sel.value = F.t;
+    for (const b of $("tabs").children) b.classList.toggle("on", b.dataset.tab === F.tab);
+    for (const b of $("posPills").children) b.classList.toggle("on", b.dataset.pos === F.pos);
+    $("posPills").hidden = F.tab !== "players"; $("advWrap").hidden = F.tab !== "teams"; $("advOnly").checked = F.adv === "1";
+    $("fP").hidden = F.tab !== "teams"; $("fU").hidden = F.tab === "users";
 
     // active username / player filters
     const chips = [];
-    if (f.u) chips.push(`<span class="tag">${esc(f.u)}<button data-clear="u" aria-label="Clear username">✕</button></span>`);
-    for (const p of f.p) chips.push(`<span class="tag"><b class="pos ${esc(p.pos)}">${esc(p.pos)}</b>${esc(p.name)} <i>${esc(p.team ?? "")}</i><button data-clear="p" data-id="${p.id}" aria-label="Remove ${esc(p.name)}">✕</button></span>`);
-    if (f.p.length && f.p.length < 5) chips.push(`<span class="sub" style="color:var(--muted)">add another player to see teams with ${f.p.length === 1 ? "both" : "all of them"}</span>`);
+    if (f.u && F.tab !== "users") chips.push(`<span class="tag">${esc(f.u)}<button data-clear="u" aria-label="Clear username">✕</button></span>`);
+    const np = F.tab === "teams" ? f.p.length : 0;
+    if (np) for (const p of f.p) chips.push(`<span class="tag">${posTag(p.pos)}${esc(p.name)} <i>${esc(p.team ?? "")}</i><button data-clear="p" data-id="${p.id}" aria-label="Remove ${esc(p.name)}">✕</button></span>`);
+    if (np && np < 5) chips.push(`<span class="sub" style="color:var(--muted)">add another player to see teams with ${np === 1 ? "both" : "all of them"}</span>`);
     $("active").innerHTML = chips.join(""); $("active").hidden = !chips.length;
 
-    // summary cards: the player's numbers against the field he is measured in (tournament / username filters)
-    const fieldRate = pct(s.fieldAdvancing, s.fieldRanked);
-    const np = f.p.length, them = np === 1 ? "him" : np === 2 ? "both" : `all ${np}`;
-    const names = np ? f.p.map((p) => p.name).join(" + ") : "";
+    // summary cards: a player's (or combo's) numbers against the field left by the tournament / username filters
+    const fieldRate = pct(s.fieldAdvancing, s.fieldRanked), them = np === 1 ? "him" : np === 2 ? "both" : `all ${np}`;
+    const scope = `${f.t ? " in this tournament" : ""}${f.u && F.tab !== "users" ? ` of ${f.u}` : ""}`;
     const cards = np
-      ? [[`Teams with ${them}`, s.count.toLocaleString(), `of ${s.field.toLocaleString()} team${s.field === 1 ? "" : "s"}${f.t ? " in this tournament" : ""}${f.u ? ` of ${f.u}` : ""}`],
+      ? [[`Teams with ${them}`, s.count.toLocaleString(), `of ${s.field.toLocaleString()} team${s.field === 1 ? "" : "s"}${scope}`],
          ["Ownership", pct(s.count, s.field), `share of those teams that drafted ${them}`],
          ["Advance rate", pct(s.advancing, s.ranked), `all teams: ${fieldRate}`],
-         ["Advancing", s.advancing.toLocaleString(), `of the ${s.count.toLocaleString()} team${s.count === 1 ? "" : "s"} with ${them} are inside the cutoff now`]]
-      : [["Teams", s.count.toLocaleString(), f.u ? `synced by ${f.u}` : `from ${data.accounts.toLocaleString()} account${data.accounts === 1 ? "" : "s"}`],
-         ["Advancing", s.advancing.toLocaleString(), "inside their league's cutoff now"],
+         ["Advancing", s.advancing.toLocaleString(), `of the ${s.count.toLocaleString()} team${s.count === 1 ? "" : "s"} with ${them} are inside the cut line now`]]
+      : [["Teams", s.field.toLocaleString(), f.u && F.tab !== "users" ? `synced by ${f.u}` : `from ${data.accounts.toLocaleString()} account${data.accounts === 1 ? "" : "s"}${f.t ? ", this tournament" : ""}`],
+         ["Advancing", s.fieldAdvancing.toLocaleString(), "inside their league's cut line now"],
          ["Advance rate", fieldRate, "of teams with a league place"]];
     $("cards").innerHTML = cards.map(([k, v, d]) => `<div class="card"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="d">${esc(d)}</div></div>`).join("");
 
-    $("title").textContent = np ? `Teams with ${names}` : f.u ? `${f.u}'s teams` : "Leaderboard";
-    $("count").textContent = `${data.total.toLocaleString()} team${data.total === 1 ? "" : "s"} · season points`;
-    $("rows").innerHTML = rows.map((t) => `<tr data-id="${esc(t.id)}" tabindex="0">
-      <td class="rk num">${t.n}</td>
-      <td class="user"><button class="ulink" data-user="${esc(t.user)}" title="Show only ${esc(t.user)}'s teams">${esc(t.user)}</button></td>
-      <td class="contest">${esc(t.contest)}</td>
-      <td class="num col-buyin">${t.buyIn == null ? "—" : "$" + t.buyIn.toLocaleString()}</td>
-      <td class="col-place">${t.rank ?? "—"} / ${t.entrants ?? "—"}${t.adv ? `<span class="chip">Advancing</span>` : ""}</td>
-      <td class="num"><b>${pts(t.points)}</b></td></tr>`).join("")
-      || `<tr><td colspan="6" class="empty">${f.u && !np ? `No synced teams under “${esc(f.u)}” yet — <a href="/connect">add your teams</a>.` : "No teams match."}</td></tr>`;
+    const unit = F.tab === "teams" ? "team" : F.tab === "players" ? "player" : "user";
+    $("count").textContent = `${data.total.toLocaleString()} ${unit}${data.total === 1 ? "" : "s"}` + (F.tab === "players" ? " · click one to see the teams that have him" : F.tab === "users" ? " · click one to see their teams" : " · click one to see its league");
+    const thClass = (cls) => cls.split(" ").filter((c) => c === "num" || c.startsWith("col-")).join(" ");
+    $("thead").innerHTML = cols.map(([key, label, cls]) => `<th class="${thClass(cls)}${key ? " sortable" : ""}"${key ? ` data-sort="${key}" tabindex="0"` : ""}>${label}${key && data.sort === key ? `<span class="arrow">${data.dir === "asc" ? "▲" : "▼"}</span>` : ""}</th>`).join("");
+    const attr = (r) => F.tab === "teams" ? `data-id="${esc(r.id)}"` : F.tab === "players" ? `data-player="${r.id}"` : `data-account="${esc(r.user)}"`;
+    $("rows").innerHTML = rows.map((r) => `<tr ${attr(r)} tabindex="0">${cols.map(([, , cls, cell]) => `<td class="${cls}">${cell(r)}</td>`).join("")}</tr>`).join("")
+      || `<tr><td colspan="${cols.length}" class="empty">${F.tab === "teams" && f.u && !np ? `No synced teams under “${esc(f.u)}” yet — <a href="/connect">add your teams</a>.` : "Nothing matches."}</td></tr>`;
     $("more").hidden = rows.length >= data.total;
     renderNote();
   }
@@ -116,49 +166,69 @@
   }
 
   // reload = the rows on screen again (after a filter change only the first page)
+  let seq = 0;
   async function load(keepShown = false) {
     if (!keepShown) shown = PAGE;
+    const mine = ++seq;
     try {
       const d = await (await fetch(url(0, Math.min(200, shown)))).json();
-      data = d; rows = d.rows ?? [];
-      // pages beyond the first 200 are fetched in order
-      while (d.live && rows.length < Math.min(shown, d.total)) rows.push(...(await (await fetch(url(rows.length, 200))).json()).rows);
-      render();
-    } catch { if (!data) $("rows").innerHTML = `<tr><td colspan="6" class="empty">Could not load the leaderboard — check your connection.</td></tr>`; }
+      const got = d.rows ?? [];
+      while (d.live && got.length < Math.min(shown, d.total)) got.push(...(await (await fetch(url(got.length, 200))).json()).rows); // pages beyond the first 200
+      if (mine !== seq) return; // a newer request has started
+      data = d; rows = got; render();
+    } catch { if (!data) $("rows").innerHTML = `<tr><td class="empty">Could not load the leaderboard — check your connection.</td></tr>`; }
   }
-  const setFilter = (k, v) => { F[k] = v; pushState(); load(); window.scrollTo({ top: 0 }); };
-
-  $("fT").addEventListener("change", (e) => setFilter("t", e.target.value));
-  window.dkbbSuggest($("fU"), "user", (r) => setFilter("u", r.username));
-  // players add up: each pick narrows the table to teams that have ALL of them (at most 5)
+  const set = (changes, { top = true } = {}) => { Object.assign(F, changes); pushState(); load(); if (top) window.scrollTo({ top: 0 }); };
   const pids = () => F.p.split(",").filter(Boolean);
-  window.dkbbSuggest($("fP"), "player", (r) => setFilter("p", [...new Set([...pids(), String(r.id)])].slice(0, 5).join(",")));
+
+  $("fT").addEventListener("change", (e) => set({ t: e.target.value }));
+  $("advOnly").addEventListener("change", (e) => set({ adv: e.target.checked ? "1" : "" }, { top: false }));
+  $("tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b && b.dataset.tab !== F.tab) set({ tab: b.dataset.tab, sort: "", dir: "" }); });
+  $("posPills").addEventListener("click", (e) => { const b = e.target.closest("[data-pos]"); if (b) set({ pos: b.dataset.pos }, { top: false }); });
+  window.dkbbSuggest($("fU"), "user", (r) => set({ u: r.username }));
+  // players add up: each pick narrows the table to teams that have ALL of them (at most 5)
+  window.dkbbSuggest($("fP"), "player", (r) => set({ p: [...new Set([...pids(), String(r.id)])].slice(0, 5).join(",") }));
   $("active").addEventListener("click", (e) => {
     const b = e.target.closest("[data-clear]"); if (!b) return;
-    setFilter(b.dataset.clear, b.dataset.id ? pids().filter((id) => id !== b.dataset.id).join(",") : "");
+    set({ [b.dataset.clear]: b.dataset.id ? pids().filter((id) => id !== b.dataset.id).join(",") : "" });
   });
   $("moreBtn").addEventListener("click", () => { shown += PAGE; load(true); });
+  const sortClick = (th) => { const k = th.dataset.sort; set({ sort: k, dir: data?.sort === k ? (data.dir === "asc" ? "desc" : "asc") : ASC_FIRST.has(k) ? "asc" : "desc" }, { top: false }); };
+  $("thead").addEventListener("click", (e) => { const th = e.target.closest("[data-sort]"); if (th) sortClick(th); });
+  $("thead").addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.matches("[data-sort]")) sortClick(e.target); });
 
-  // a row opens that team's league view — the same pop-up as on the portfolio pages (boot.js team mode)
+  // a team row opens its league view — the same pop-up the site was built with (boot.js), in a full-screen frame.
+  // The address carries ?team= while it is open, so the link to a team can be shared.
   let frame = null;
   function openTeam(id) {
-    closeTeam();
+    closeTeam(false);
     frame = document.createElement("iframe");
     frame.className = "teamframe"; frame.title = "Team"; frame.src = "/team/" + encodeURIComponent(id);
     document.body.appendChild(frame);
     document.documentElement.style.overflow = "hidden";
+    F.team = String(id); pushState();
   }
-  function closeTeam() { frame?.remove(); frame = null; document.documentElement.style.overflow = ""; }
+  function closeTeam(update = true) { frame?.remove(); frame = null; document.documentElement.style.overflow = ""; if (update && F.team) { F.team = ""; pushState(); } }
   window.addEventListener("message", (e) => { if (e.origin === location.origin && e.data?.dkbbdb === "close-team") closeTeam(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTeam(); });
-  $("rows").addEventListener("click", (e) => {
-    const u = e.target.closest("[data-user]");
-    if (u) { setFilter("u", u.dataset.user); return; }
-    const tr = e.target.closest("tr[data-id]"); if (tr) openTeam(tr.dataset.id);
-  });
-  $("rows").addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.matches("tr[data-id]")) openTeam(e.target.dataset.id); });
+  function rowClick(target) {
+    const u = target.closest("[data-user]");
+    if (u) return set({ u: u.dataset.user });
+    const tr = target.closest("tr"); if (!tr) return;
+    if (tr.dataset.id) openTeam(tr.dataset.id);
+    // a player → the teams that have him; a user → all of their teams. Filters that were not visible on the tab
+    // being left (an old player pick, "advancing only") are dropped so the rows match what was clicked
+    else if (tr.dataset.player) set({ tab: "teams", p: tr.dataset.player, adv: "", sort: "", dir: "" });
+    else if (tr.dataset.account) set({ tab: "teams", u: tr.dataset.account, p: "", adv: "", sort: "", dir: "" });
+  }
+  $("rows").addEventListener("click", (e) => { if (!e.target.closest("a")) rowClick(e.target); });
+  $("rows").addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.matches("tr")) rowClick(e.target); });
 
-  load();
+  // first visit: one line on what this is (dismissed for good with ✕)
+  try { if (!localStorage.getItem("dkbbdb-hello")) $("hello").hidden = false; } catch { $("hello").hidden = false; }
+  $("helloClose").addEventListener("click", () => { $("hello").hidden = true; try { localStorage.setItem("dkbbdb-hello", "1"); } catch { /* private window */ } });
+
+  load().then(() => { if (F.team) openTeam(F.team); });
   setInterval(() => { if (document.visibilityState === "visible" && !frame) load(true); }, 60e3);
   setInterval(renderNote, 15e3);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && !frame) load(true); });

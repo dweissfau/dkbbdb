@@ -13,6 +13,8 @@
   if (!team) { location.replace("/"); return; }
   const query = "entry=" + encodeURIComponent(team);
   const framed = window.parent !== window;
+  // a team link opened directly (shared, bookmarked): show it where it belongs — over the leaderboard
+  if (!framed) { location.replace("/?team=" + encodeURIComponent(team)); return; }
   const closeFrame = () => { if (framed) window.parent.postMessage({ dkbbdb: "close-team" }, location.origin); else location.href = "/"; };
 
   // only the pop-up is visible; behind it is the dimmed leaderboard of the parent page

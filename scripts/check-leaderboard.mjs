@@ -1,7 +1,7 @@
 // Leaderboard filters + player stats straight from the lib (no HTTP), with invariants checked.
 //   node scripts/check-leaderboard.mjs [player name]
 import { connect, loadEnv } from "./db.mjs";
-import { leaderboard, searchPlayers } from "../lib/leaderboard.js";
+import { leaderboard, playersView, searchPlayers, usersView } from "../lib/leaderboard.js";
 
 process.env.DATABASE_URL ??= loadEnv().DATABASE_URL;
 const db = await connect();
@@ -37,6 +37,32 @@ ok("two players = intersection of each one's teams", both.rows.map((r) => r.id).
 ok("order of the ids does not matter; junk ids are ignored", (await leaderboard(db, { p: `${b2.id}, ${a.id},abc,-4` })).total === both.total);
 const page2 = await leaderboard(db, { offset: 100, limit: 50 });
 ok("paging", page2.rows[0]?.n === 101 && page2.rows.length === 50 && page2.rows[0].id === all.rows[100].id);
+
+// columns, sorting, advancing-only
+const byGap = await leaderboard(db, { sort: "gap", dir: "desc", limit: 200 });
+const gaps = byGap.rows.map((r) => r.gap).filter((g) => g != null);
+ok("sort by gap: biggest cushion first, and the sign matches advancing / out", gaps.every((g, i) => i === 0 || gaps[i - 1] >= g) && byGap.rows.every((r) => r.gap == null || r.adv == null || (r.adv ? r.gap >= 0 : r.gap <= 0)), `best +${gaps[0]}, worst ${gaps.at(-1)}`);
+const byDate = await leaderboard(db, { sort: "date", dir: "asc", limit: 5 });
+ok("sort by draft date ascending", byDate.rows.every((r, i) => i === 0 || byDate.rows[i - 1].date <= r.date), byDate.rows[0].date?.slice(0, 10));
+const advOnly = await leaderboard(db, { adv: "1", limit: 200 });
+ok("advancing-only filter", advOnly.total === all.stats.advancing && advOnly.rows.every((r) => r.adv === true), `${advOnly.total} teams`);
+ok("rows carry players left", all.rows.every((r) => r.left == null || (r.left >= 0 && r.left <= 20)));
+
+// players view
+const pv = await playersView(db, { limit: 200 });
+const jsn = pv.rows.find((r) => r.id === a.id);
+ok("players view agrees with the player filter", jsn && jsn.teams === onlyA.total && jsn.advancing === onlyA.stats.advancing, `${jsn?.name}: ${jsn?.teams} teams, own ${jsn?.own}%, adv ${jsn?.advRate}%, avg pick ${jsn?.avgPick}`);
+ok("players view: sorted by teams, ownership = teams / field", pv.rows.every((r, i) => i === 0 || pv.rows[i - 1].teams >= r.teams) && pv.rows.every((r) => Math.abs(r.own - 100 * r.teams / pv.stats.field) < 0.01), `${pv.total} players`);
+const qbs = await playersView(db, { pos: "QB", sort: "advRate", dir: "desc", limit: 50 });
+ok("players view: position filter + sort by advance rate", qbs.rows.every((r) => r.pos === "QB") && qbs.rows.filter((r) => r.advRate != null).every((r, i, l) => i === 0 || l[i - 1].advRate >= r.advRate), `${qbs.total} QBs, top ${qbs.rows[0]?.name} ${qbs.rows[0]?.advRate}%`);
+const pvU = await playersView(db, { u: "fleaflick" });
+ok("players view within one username", pvU.stats.field === 10 && pvU.rows.every((r) => r.teams <= 10));
+
+// users view
+const uv = await usersView(db, {});
+const kk = uv.rows.find((r) => r.user === "kknox20");
+ok("users view: one row per account, totals add up", uv.total === all.accounts && uv.rows.reduce((s, r) => s + r.teams, 0) === all.teams, uv.rows.map((r) => `${r.user} ${r.teams} teams $${r.buyIns} ${r.advancing} adv`).join(" | "));
+ok("users view: best team = that user's top leaderboard row", kk && kk.best === (await leaderboard(db, { u: "kknox20", limit: 1 })).rows[0].points, `kknox20 best ${kk?.best}`);
 
 await db.end();
 console.log(checks.every(Boolean) ? `\nall ${checks.length} checks pass` : `\n${checks.filter((c) => !c).length} FAILED`);

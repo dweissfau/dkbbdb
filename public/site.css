@@ -97,3 +97,51 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
 /* privacy page */
 .doc h1 { font-size: 22px; margin: 6px 0 4px; }
 footer a { color: inherit; }
+
+/* front page v3: tabs, sortable headers, first-visit strip */
+[hidden] { display: none !important; }
+.hello { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; color: var(--ink-2); }
+.hello b { color: var(--ink); }
+.hello button { background: none; border: none; color: var(--muted); font: inherit; cursor: pointer; padding: 0 4px; margin-left: auto; }
+.hello button:hover { color: var(--ink); }
+.pill.sm { padding: 2px 10px; font-size: 12.5px; }
+.check { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 13px; cursor: pointer; user-select: none; }
+.check input { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; }
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover, th.sortable:focus-visible { color: var(--ink); }
+th .arrow { margin-left: 4px; font-size: 9px; color: var(--accent); }
+.chip { margin-left: 0; }
+.chip.out { background: rgba(217,89,38,.16); color: #f08a5d; }
+.pname { font-weight: 600; }
+.pteam { color: var(--muted); font-style: normal; font-size: 12.5px; }
+td.user .pos { margin-right: 4px; }
+@media (max-width: 640px) {
+  .col-date, .col-left, .col-place { display: none; }
+  .head { gap: 8px; }
+  .chip { display: inline-block; margin: 0; }
+  .hello { font-size: 13px; }
+}
+
+/* desktop / phone label variants */
+.sm { display: none; }
+.under { color: var(--muted); font-size: 12px; font-weight: 400; white-space: normal; line-height: 1.3; margin-top: 1px; }
+@media (max-width: 640px) {
+  .lg { display: none; }
+  .sm { display: inline; }
+  div.sm { display: block; }
+  .col-contest { display: none; }
+  /* less stacked above the table: three slim cards in one row, no sub-text */
+  .cards { grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
+  .card { padding: 8px 10px; }
+  .card .v { font-size: 17px; }
+  .card .d { display: none; }
+  .filters { gap: 6px; margin-bottom: 10px; }
+  .filters select, .find input { padding: 7px 10px; }
+  .hello { margin-bottom: 10px; }
+  td.rk { padding-left: 2px; padding-right: 2px; }
+  td, th { padding: 8px 5px; }
+  th { letter-spacing: 0; }
+  .pteam { display: none; }
+  td.user { white-space: normal; }
+  .pname { overflow-wrap: anywhere; }
+}
