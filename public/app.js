@@ -1302,6 +1302,16 @@ function applyLive(v) {
   if (document.getElementById("modal").classList.contains("on") && openSeason.current) openSeason(openSeason.current.id, openSeason.current.key, openSeason.current.wk);
   return true;
 }
+// live/?c=1 sends each roster row's game state as an index into v.games (deploy/lib/live.js compactView):
+// put the five fields back so everything below sees the rows it was written for
+function expandLive(v) {
+  if (!v?.games) return v;
+  const un = (row) => [...row.slice(0, 4), ...(v.games[row[4]] ?? [null, null, null, null, null]), ...row.slice(5)];
+  for (const id of Object.keys(v.scores ?? {})) v.scores[id] = v.scores[id].map(un);
+  for (const byKey of Object.values(v.opp?.rosters ?? {})) for (const k of Object.keys(byKey)) byKey[k] = byKey[k].map(un);
+  delete v.games;
+  return v;
+}
 async function pollLive() {
   if (document.visibilityState === "hidden") return;
   try {
@@ -1309,7 +1319,7 @@ async function pollLive() {
     if (res.status === 304) { LIVE.ok = true; return; }
     if (!res.ok) { LIVE.ok = false; return; }
     LIVE.etag = res.headers.get("etag");
-    applyLive(window.dkbbExpand(await res.json())); window.dkbbAfterLive?.();
+    applyLive(expandLive(await res.json())); window.dkbbAfterLive?.();
     LIVE.ok = true;
   } catch { LIVE.ok = false; }
 }

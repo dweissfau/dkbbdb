@@ -32,10 +32,10 @@ nav.tabs button[data-tab="partners"], nav.tabs button[data-tab="debug"], [data-s
 // ---- script ----
 js = swap(js, `const DK = JSON.parse(document.getElementById("dk-data").textContent);`, `const DK = window.__DK; // set by boot.js from /api/portfolio`, "DK source");
 js = swap(js,
-  `const res = await fetch("live/", { headers: LIVE.etag ? { "If-None-Match": LIVE.etag } : {}, cache: "no-store", credentials: "same-origin" });`,
+  `const res = await fetch("live/?c=1", { headers: LIVE.etag ? { "If-None-Match": LIVE.etag } : {}, cache: "no-store", credentials: "same-origin" });`,
   `const res = await fetch(window.dkbbLiveUrl(), { headers: LIVE.etag ? { "If-None-Match": LIVE.etag } : {}, cache: "no-cache" });`,
   "live fetch");
-js = swap(js, `applyLive(await res.json());`, `applyLive(window.dkbbExpand(await res.json())); window.dkbbAfterLive?.();`, "expand compact view");
+js = swap(js, `applyLive(expandLive(await res.json()));`, `applyLive(expandLive(await res.json())); window.dkbbAfterLive?.();`, "after-live hook");
 js = swap(js,
   `    ["My effective buy-ins", fmt$(myFees),
       shared.length ? \`of \${fmt$(fees)} total — partners carry the rest\` : "no shared teams marked yet"],

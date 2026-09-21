@@ -28,15 +28,7 @@
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeFrame(); });
   document.body.appendChild(veil);
 
-  // /api/live sends each roster row's game state as an index into view.games (lib/view.js compactView):
-  // put the five fields back so the page script sees the rows it was written for
-  window.dkbbExpand = (v) => {
-    if (!v?.games) return v;
-    const un = (row) => [...row.slice(0, 4), ...(v.games[row[4]] ?? [null, null, null, null, null]), ...row.slice(5)];
-    for (const id of Object.keys(v.scores ?? {})) v.scores[id] = v.scores[id].map(un);
-    for (const byKey of Object.values(v.opp?.rosters ?? {})) for (const k of Object.keys(byKey)) byKey[k] = byKey[k].map(un);
-    return v;
-  };
+  // (/api/live sends the compact view; app.js expands it itself — expandLive comes with the template)
   window.dkbbLiveUrl = () => "/api/live?" + query;
 
   const loadScript = (src) => new Promise((ok, fail) => {
