@@ -3,59 +3,86 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>dkbbdb — best ball portfolio tracker</title>
-<meta name="description" content="Look up a DraftKings best ball portfolio by username: live scores, the advance line, league standings and rosters, player exposure.">
+<title>dkbbdb</title>
+<meta name="description" content="DraftKings best ball portfolios, scored live: look up a username to see every team, the advance line, league standings and rosters.">
 <link rel="stylesheet" href="/site.css">
 </head>
 <body>
-<main class="page">
-  <h1 class="brand">dkbbdb</h1>
-  <p class="lead">Every best ball team you drafted on DraftKings, in one place — scored live, all season.</p>
-
+<div class="bar">
+  <a class="brand" href="/">dkbbdb</a>
   <form class="find" id="find" autocomplete="off">
-    <input id="q" type="search" placeholder="DraftKings username" aria-label="DraftKings username" spellcheck="false" autocapitalize="off" autofocus>
-    <button class="cta" type="submit">See teams</button>
-    <div class="hits" id="hits" hidden></div>
+    <input type="search" placeholder="Search a DraftKings username" aria-label="Search a DraftKings username" spellcheck="false" autocapitalize="off">
+    <div class="hits" hidden></div>
   </form>
-  <p class="muted">Not listed? <a href="/connect">Add your teams</a> — it takes about a minute, no sign-up.</p>
-
-  <div class="grid">
-    <div class="tile"><h2>Live scores, no refresh</h2><p>Every team updates play by play from public NFL stats using DraftKings scoring. Your computer can be off.</p></div>
-    <div class="tile"><h2>The advance line</h2><p>See which teams are advancing and exactly how many points the rest are out by, sorted by what is at stake.</p></div>
-    <div class="tile"><h2>Every league, every roster</h2><p>Open a team to see the full 12-team standings, any opponent's lineup, and scores week by week.</p></div>
-    <div class="tile"><h2>Who has him?</h2><p>Type a player's name to see every team with him, and every league where an opponent has him.</p></div>
-    <div class="tile"><h2>Exposure and balance</h2><p>Ownership of every player across the portfolio, against ADP, by position and by draft date.</p></div>
-    <div class="tile"><h2>No account needed</h2><p>Install the browser extension, open your DraftKings contests page and click Sync. We never see your DraftKings password.</p></div>
+  <div class="spacer"></div>
+  <a class="btn primary" href="/connect">Add your teams</a>
+</div>
+<main>
+  <div class="panel">
+    <div class="head">
+      <h1>Top teams</h1>
+      <div class="pills" id="pills">
+        <button class="pill on" data-view="season">Season</button>
+        <button class="pill" data-view="thisWeek" id="weekPill">This week</button>
+      </div>
+      <span class="note" id="count"></span>
+      <div class="spacer"></div>
+      <span class="note" id="liveNote"></span>
+    </div>
+    <div class="scroll-x">
+      <table>
+        <thead><tr><th></th><th>User</th><th>Contest</th><th class="num col-buyin">Buy-in</th><th class="col-place">Place</th><th class="num" id="thPts">Points</th><th class="num" id="thWk">Week</th></tr></thead>
+        <tbody id="rows"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
   </div>
-
   <footer>Independent tool — not affiliated with, endorsed by, or sponsored by DraftKings. DraftKings is a trademark of its owner.</footer>
 </main>
+<script src="/site.js"></script>
 <script>
 (() => {
-  const q = document.getElementById("q"), hits = document.getElementById("hits");
-  const go = (name) => { location.href = "/u/" + encodeURIComponent(name.trim()); };
-  let timer = 0, seq = 0;
-  q.addEventListener("input", () => {
-    clearTimeout(timer);
-    const s = q.value.trim();
-    if (s.length < 2) { hits.hidden = true; return; }
-    timer = setTimeout(async () => {
-      const mine = ++seq;
-      try {
-        const { results } = await (await fetch("/api/search?q=" + encodeURIComponent(s))).json();
-        if (mine !== seq) return;
-        hits.replaceChildren(...results.map((r) => {
-          const b = document.createElement("button");
-          b.type = "button"; b.textContent = r.username;
-          const n = document.createElement("span"); n.textContent = `${r.teams} team${r.teams === 1 ? "" : "s"}`;
-          b.append(n); b.onclick = () => go(r.username);
-          return b;
-        }));
-        hits.hidden = !results.length;
-      } catch { hits.hidden = true; }
-    }, 180);
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const pts = (n) => n == null ? "—" : Number(n).toFixed(2); // DraftKings shows fantasy points to the cent
+  const agoTxt = (iso) => { const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000)); return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : `${(s / 3600).toFixed(1)} h ago`; };
+  let data = null, view = "season";
+
+  function render() {
+    if (!data?.live) { $("rows").innerHTML = `<tr><td colspan="7" class="empty">Scores are unavailable right now — try again in a minute.</td></tr>`; return; }
+    const list = data[view] ?? [];
+    $("weekPill").textContent = data.week ? `Week ${data.week}` : "This week";
+    $("thWk").textContent = data.week ? `Wk ${data.week}` : "Week";
+    $("count").textContent = `${data.teams.toLocaleString()} team${data.teams === 1 ? "" : "s"} from ${data.accounts.toLocaleString()} account${data.accounts === 1 ? "" : "s"}`;
+    $("rows").innerHTML = list.map((t, i) => `<tr data-u="${esc(t.user)}">
+      <td class="rk num">${i + 1}</td>
+      <td class="user"><a href="/u/${encodeURIComponent(t.user)}">${esc(t.user)}</a></td>
+      <td class="contest" title="${esc(t.contest)}">${esc(String(t.contest ?? "").replace(/^NFL Best Ball\s+/i, "").replace(/\s*\(Tournament\)\s*$/i, ""))}</td>
+      <td class="num col-buyin">${t.buyIn == null ? "—" : "$" + t.buyIn.toLocaleString()}</td>
+      <td class="col-place">${t.rank ?? "—"} / ${t.entrants ?? "—"}${t.adv ? `<span class="chip">Advancing</span>` : ""}</td>
+      <td class="num">${view === "season" ? `<b>${pts(t.points)}</b>` : pts(t.points)}</td>
+      <td class="num">${view === "thisWeek" ? `<b>${pts(t.week)}</b>` : pts(t.week)}</td></tr>`).join("")
+      || `<tr><td colspan="7" class="empty">No teams yet — be the first: <a href="/connect">add your teams</a>.</td></tr>`;
+    renderNote();
+  }
+  function renderNote() {
+    if (!data?.at) return;
+    $("liveNote").innerHTML = `<span class="live"><span class="dot"></span>${data.playing ? "games on" : "live scoring"} · updated ${agoTxt(data.at)}</span>`;
+  }
+  async function load() {
+    if (document.visibilityState === "hidden") return;
+    try { data = await (await fetch("/api/leaderboard")).json(); render(); } catch { /* keep the last table */ }
+  }
+  $("pills").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    view = b.dataset.view;
+    for (const x of $("pills").children) x.classList.toggle("on", x === b);
+    render();
   });
-  document.getElementById("find").addEventListener("submit", (e) => { e.preventDefault(); if (q.value.trim()) go(q.value); });
+  $("rows").addEventListener("click", (e) => { const tr = e.target.closest("tr[data-u]"); if (tr && !e.target.closest("a")) location.href = "/u/" + encodeURIComponent(tr.dataset.u); });
+  load();
+  setInterval(load, 60e3);
+  setInterval(renderNote, 15e3);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") load(); });
 })();
 </script>
 </body>
