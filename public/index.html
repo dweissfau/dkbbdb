@@ -103,7 +103,7 @@
       ["left", "Left", "num col-left", (t) => t.left ?? "—"], ["points", "Points", "num", (t) => `<b>${pts(t.points)}</b>`]],
     players: [[null, "", "rk num", (r) => r.n], ["name", "Player", "user", (r) => `${posTag(r.pos)} ${logo(r.team)}<span class="pname">${esc(r.name)}</span>`],
       ["teams", "Teams", "num", (r) => r.teams], ["own", L("Ownership", "Own"), "num", (r) => pc1(r.own)], ["advancing", "Advancing", "num col-buyin", (r) => r.advancing],
-      ["advRate", L("Advance rate", "Adv %"), "num", (r) => pc1(r.advRate)], ["avgPick", "Avg pick", "num col-date", (r) => r.avgPick ?? "—"]],
+      ["advRate", L("Advance rate", "Adv %"), "num", (r) => pc1(r.advRate)], ["avgPick", "Avg pick", "num col-date", (r) => r.avgPick == null ? "—" : Number(r.avgPick).toFixed(1)]],
     users: [[null, "", "rk num", (r) => r.n], ["user", "User", "user", (r) => `<span class="pname">${esc(r.user)}</span>`], ["teams", "Teams", "num", (r) => r.teams],
       ["buyIns", "Buy-ins", "num col-buyin", (r) => money(r.buyIns)], ["advancing", L("Advancing", "Adv"), "num", (r) => r.advancing], ["advRate", L("Advance rate", "Adv %"), "num", (r) => pc1(r.advRate)],
       ["best", L("Best team", "Best"), "num", (r) => `<b>${pts(r.best)}</b>`], [null, "", "contest col-date", (r) => esc(r.bestContest)]],
