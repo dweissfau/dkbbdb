@@ -6,7 +6,7 @@ Upload `dkbbdb-extension-<version>.zip` from this folder (rebuild it with `pytho
 
 **Name** (comes from the zip): Best Ball Portfolio Sync for dkbbdb
 
-**Summary** (comes from the zip): Sends your own best ball drafts from your DraftKings contests page to dkbbdb.com. Never reads your password. Not affiliated with DraftKings.
+**Summary** (comes from the zip): Sends your own best ball drafts from your DraftKings contests page to dkbbdb.com. Not affiliated with DraftKings.
 
 **Description**
 
