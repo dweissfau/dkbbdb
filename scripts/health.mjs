@@ -14,6 +14,10 @@ const c = await one(`select (select count(*) from dk_accounts)::int accounts, (s
   (select count(*) from dk_accounts where created_at > now() - interval '7 days')::int new_accounts, pg_database_size(current_database()) bytes`);
 console.log(`${c.accounts} accounts (${c.new_accounts} new this week) · ${c.teams} teams · ${c.pods} leagues · database ${(c.bytes / 1e6).toFixed(0)} MB of 500 MB (${(100 * c.bytes / 5e8).toFixed(0)} %)`);
 
+// the leaderboard run (lib/leaderboard.js): how long the last one took. Seconds, not tenths, would be the sign to look at it
+const b = await one(`select at, ms, pg_column_size(body) bytes, (select count(*) from pod_prior)::int stored from board_cache where id = 1`);
+if (b) console.log(`leaderboard: last scored ${new Date(b.at).toISOString().slice(0, 16).replace("T", " ")} UTC in ${b.ms} ms · stored board ${(b.bytes / 1024).toFixed(0)} KB · finished-week totals stored for ${b.stored} of ${c.pods} leagues`);
+
 // try to match anyone new first, then report who is still unmatched
 const aliases = JSON.parse(fs.readFileSync(path.join(ROOT, "db", "sleeper-aliases.json"), "utf8"));
 const { mapped, unmatched } = await mapSleeper(db, { aliases }).catch((e) => ({ mapped: 0, unmatched: [], error: e }));

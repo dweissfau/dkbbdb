@@ -4,6 +4,9 @@
 import { db } from "../lib/db.js";
 import { leaderboard, playersView } from "../lib/leaderboard.js";
 
+// a request may carry the background refresh (waitUntil) — and, right after a week ends, the one-off fold of that week
+export const config = { maxDuration: 60 };
+
 export default async function handler(req, res) {
   res.setHeader("cache-control", "public, s-maxage=45, stale-while-revalidate=60");
   const q = req.query, fn = q.view === "players" ? playersView : leaderboard;

@@ -3,6 +3,7 @@
 // (lib/live.js prevWeekRank). Vercel calls it with "Authorization: Bearer <CRON_SECRET>".
 import { db } from "../lib/db.js";
 import { userView } from "../lib/view.js";
+import { refreshBoard } from "../lib/leaderboard.js";
 
 export const config = { maxDuration: 300 };
 
@@ -15,5 +16,8 @@ export default async function handler(req, res) {
     try { const r = await userView(db(), [user_key], { forceSave: true }); saved += r.body?.source?.historySaved > 0 ? 1 : 0; }
     catch (e) { errors.push(`${user_key}: ${String(e?.message ?? e)}`); }
   }
-  res.status(200).json({ ok: true, accounts: rows.length, saved, errors });
+  // the week has just rolled: fold the finished week into the stored totals now (lib/prior.js), not during a visit
+  let board = null;
+  try { const b = await refreshBoard(db()); board = b ? { teams: b.teams.length, week: b.week } : "feeds unavailable"; } catch (e) { errors.push("board: " + String(e?.message ?? e)); }
+  res.status(200).json({ ok: true, accounts: rows.length, saved, board, errors });
 }

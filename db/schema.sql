@@ -107,3 +107,23 @@ create table if not exists upload_log (
   note        text
 );
 create index if not exists upload_log_sender_at on upload_log (sender, at desc);
+
+-- Finished weeks never change (apart from stat corrections), so each pod's folded totals are stored instead of
+-- being re-scored every minute (lib/prior.js). data = { seat: { draftableId: [all, counted, throughWeek] } } — the
+-- same numbers lib/pubscore.js foldWeeks() returns as `prior`, keyed by draft seat because a roster's key can
+-- change (seat → entry id) when its owner syncs.
+create table if not exists pod_prior (
+  contest_id   bigint primary key references contests(contest_id) on delete cascade,
+  through_week int not null,
+  computed_at  timestamptz not null default now(),
+  data         jsonb not null
+);
+
+-- The site-wide leaderboard, scored in the background and read by every request (lib/leaderboard.js).
+create table if not exists board_cache (
+  id            int primary key,
+  at            timestamptz not null,
+  refreshing_at timestamptz,
+  ms            int,
+  body          jsonb not null
+);
