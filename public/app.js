@@ -727,7 +727,7 @@ function weekStripHtml(d) {
   const points = me ? s.points : std?.[3] ?? null, rank = me ? s.rank : std?.[2] ?? null;
   const btn = (wk, k, v, r) => `<button type="button" class="wk${sel === wk ? " on" : ""}" data-wk="${wk}"><span class="k">${k}</span><span class="v">${v}</span><span class="r">${r}</span></button>`;
   // newest week first, so the week being played is always in view
-  return `<h4 style="margin:14px 0 6px">Week by week <span class="lg-note">${me ? "my" : `<b style="color:var(--ink)">${esc(std?.[1] ?? "this team")}</b>'s`} score each week · click a week to see that week's standings and lineup</span></h4>
+  return `<h4 style="margin:14px 0 6px">Week by week <span class="lg-note"><b style="color:var(--ink)">${esc(std?.[1] ?? "this team")}</b>'s score each week · click a week to see that week's standings and lineup</span></h4>
     <div class="wkbar">${btn("", "Season", points != null ? Number(points).toFixed(2) : "—", rank != null ? `${ordinal(rank)} of ${s.entrants ?? "?"}` : "—")}${
     weeks.map((w, i) => [w, i]).reverse().map(([w, i]) => { const place = weekRanksOf(d.contestId, i).get(key);
       return btn(w, `Week ${w}${i === weeks.length - 1 ? ` <span class="now">· now</span>` : ""}`, mine[i] != null ? Number(mine[i]).toFixed(2) : "—", place != null ? `${ordinal(place)} that week` : "—"); }).join("")}</div>`;
@@ -756,7 +756,7 @@ function leagueStandingsHtml(d, selKey) {
       <div class="scroll-x"><table><thead><tr><th class="num">#</th><th>Team</th><th class="num">Wk ${wkNo}</th><th class="num" title="season total and place">Season</th></tr></thead>
       <tbody>${order.map(([k, n, r, p]) => { const me = k === d.id, w = teamWeeks(d.contestId, k)?.[wi];
         return `<tr class="pick${me ? " me" : ""}${k === selKey ? " sel" : ""}" data-key="${k}">
-          <td class="num">${places.get(k) ?? "—"}</td><td class="team-name">${esc(n)}${me ? " (mine)" : ""}${hasHim(k) ? `<span class="tag ${me ? "mine" : "opp"}">has him</span>` : ""}</td>
+          <td class="num">${places.get(k) ?? "—"}</td><td class="team-name">${esc(n)}${hasHim(k) ? `<span class="tag ${me ? "mine" : "opp"}">has him</span>` : ""}</td>
           <td class="num">${w != null ? Number(w).toFixed(2) : "—"}</td><td class="num wk-muted">${p != null ? Number(p).toFixed(2) : "—"}${r != null ? ` · ${ordinal(r)}` : ""}</td></tr>`; }).join("")}</tbody></table></div>`;
   }
   return `<h4>League standings <span class="lg-note">${pod.length} teams · top ${cut ?? "?"} advance · "left" = players yet to play this week · tap a team to see its roster</span></h4>
@@ -764,13 +764,13 @@ function leagueStandingsHtml(d, selKey) {
     <tbody>${pod.map(([k, n, r, p, t], i) => { const me = k === d.id, adv = inCut(r), lastIn = adv && !(pod[i + 1] && inCut(pod[i + 1][2]));
       const has = searchQuery() !== "" && (me ? (picksByEntry.get(d.id) ?? []).some((pk) => playerMatch(P[pk.pl]?.n)) : (podRoster(d.contestId, k) ?? []).some((p) => playerMatch(p.name)));
       return `<tr class="pick${me ? " me" : ""}${lastIn ? " cut-line" : ""}${k === selKey ? " sel" : ""}" data-key="${k}">
-        <td class="num"${adv ? ' style="color:var(--good);font-weight:700"' : ""}>${r ?? "—"}</td><td class="team-name">${esc(n)}${me ? " (mine)" : ""}${has ? `<span class="tag ${me ? "mine" : "opp"}">has him</span>` : ""}</td>
+        <td class="num"${adv ? ' style="color:var(--good);font-weight:700"' : ""}>${r ?? "—"}</td><td class="team-name">${esc(n)}${has ? `<span class="tag ${me ? "mine" : "opp"}">has him</span>` : ""}</td>
         <td class="num">${p != null ? Number(p).toFixed(2) : "—"}</td><td class="num">${t != null ? Math.round(t / 60) : "—"}</td></tr>`; }).join("")}</tbody></table></div>`;
 }
 function leagueRosterHtml(d, key) {
   const me = key === d.id;
   const std = (SEA.pods[d.contestId] ?? []).find((x) => x[0] === key);
-  const who = me ? "My team" : esc(std?.[1] ?? String(key));
+  const who = esc(std?.[1] ?? (me ? "This team" : String(key)));
   let synced = podRoster(d.contestId, key);
   // a week picked on the strip → that week's lineup and points (game tags only for the week being played)
   const wi = selWeekIdx(), inWeek = wi >= 0 && (synced ?? []).some((p) => p.wkPts), wkNo = weekList()[wi];
@@ -816,7 +816,7 @@ function openSeason(id, keyPref = null, wkPref = null) {
       <input data-mf="${key}" type="${type}" ${type === "number" ? 'step="any" min="0"' : ""} value="${esc(man[key] ?? "")}"
         placeholder="${esc(ph ?? "")}" style="${inputCss}"></label>`;
   const syncedLine = syn.rank != null || syn.points != null
-    ? `Synced: ${syn.rank != null ? `rank ${syn.rank} / ${syn.entrants ?? "?"}` : "no rank"}` +
+    ? `Now: ${syn.rank != null ? `rank ${syn.rank} / ${syn.entrants ?? "?"}` : "no rank"}` +
       `${syn.points != null ? ` · ${Number(syn.points).toFixed(2)} pts` : ""}` +
       `${(syn.pp ?? d.pp) != null ? ` · top ${syn.pp ?? d.pp} advance/get paid` : ""}` +
       `${syn.at ? ` · as of ${new Date(syn.at).toLocaleString()}` : ""}`
@@ -1309,7 +1309,7 @@ async function pollLive() {
     if (res.status === 304) { LIVE.ok = true; return; }
     if (!res.ok) { LIVE.ok = false; return; }
     LIVE.etag = res.headers.get("etag");
-    applyLive(window.dkbbExpand(await res.json()));
+    applyLive(window.dkbbExpand(await res.json())); window.dkbbAfterLive?.();
     LIVE.ok = true;
   } catch { LIVE.ok = false; }
 }

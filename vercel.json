@@ -27,7 +27,8 @@
     }
   ],
   "rewrites": [
-    { "source": "/u/:name", "destination": "/app" }
+    { "source": "/u/:name", "destination": "/app" },
+    { "source": "/team/:id", "destination": "/app" }
   ],
   "redirects": [
     {

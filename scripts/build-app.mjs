@@ -22,7 +22,7 @@ function swap(where, from, to, label) {
 // ---- markup ----
 html = swap(html, "<title>DK Best Ball Portfolio</title>", "<title>dkbbdb</title>", "title");
 html = swap(html, "<h1>DK Best Ball Portfolio</h1>", `<h1><a href="/" style="color:inherit;text-decoration:none">dkbbdb</a> <span id="who" style="font-weight:400;color:var(--ink-2)"></span></h1>`, "h1");
-html = swap(html, `<button class="btn" id="exportCsv">`, `<a class="btn" href="/" style="text-decoration:none">Search a username</a>\n  <a class="btn" href="/connect" style="text-decoration:none">Add your teams</a>\n  <button class="btn" id="exportCsv">`, "header links");
+html = swap(html, `<button class="btn" id="exportCsv">`, `<a class="btn" href="/" style="text-decoration:none">Leaderboard</a>\n  <a class="btn" href="/connect" style="text-decoration:none">Add your teams</a>\n  <button class="btn" id="exportCsv">`, "header links");
 html = swap(html, "</style>", `
 /* public version: no partner features, no local-tooling tab */
 nav.tabs button[data-tab="partners"], nav.tabs button[data-tab="debug"], [data-sf="shared"], [data-sf="manual"],
@@ -35,7 +35,7 @@ js = swap(js,
   `const res = await fetch("live/", { headers: LIVE.etag ? { "If-None-Match": LIVE.etag } : {}, cache: "no-store", credentials: "same-origin" });`,
   `const res = await fetch(window.dkbbLiveUrl(), { headers: LIVE.etag ? { "If-None-Match": LIVE.etag } : {}, cache: "no-cache" });`,
   "live fetch");
-js = swap(js, `applyLive(await res.json());`, `applyLive(window.dkbbExpand(await res.json()));`, "expand compact view");
+js = swap(js, `applyLive(await res.json());`, `applyLive(window.dkbbExpand(await res.json())); window.dkbbAfterLive?.();`, "expand compact view");
 js = swap(js,
   `    ["My effective buy-ins", fmt$(myFees),
       shared.length ? \`of \${fmt$(fees)} total — partners carry the rest\` : "no shared teams marked yet"],
@@ -53,6 +53,18 @@ js = swap(js,
 js = swap(js,
   `title="scored on the server from public NFL stats with DraftKings' rules; official DraftKings numbers take over whenever the extension is running"`,
   `title="scored from public NFL stats with DraftKings' rules"`, "live tooltip");
+
+// the viewer is not necessarily the owner: no first-person wording in the league view
+function swapAll(where, from, to, label, times) {
+  const n = where.split(from).length - 1;
+  if (n !== times) throw new Error(`build-app: "${label}" matched ${n} times (expected ${times})`);
+  return where.split(from).join(to);
+}
+js = swapAll(js, `\${me ? " (mine)" : ""}`, "", "(mine) tag", 2);
+js = swap(js, `const who = me ? "My team" : esc(std?.[1] ?? String(key));`, `const who = esc(std?.[1] ?? (me ? "This team" : String(key)));`, "roster heading");
+js = swap(js, `\${me ? "my" : \`<b style="color:var(--ink)">\${esc(std?.[1] ?? "this team")}</b>'s\`} score each week`,
+  `<b style="color:var(--ink)">\${esc(std?.[1] ?? "this team")}</b>'s score each week`, "week strip heading");
+js = swap(js, "`Synced: ${syn.rank != null", "`Now: ${syn.rank != null", "status line");
 
 fs.mkdirSync(path.join(ROOT, "public"), { recursive: true });
 fs.writeFileSync(path.join(ROOT, "public", "app.html"), html);

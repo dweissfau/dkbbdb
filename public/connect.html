@@ -38,5 +38,6 @@
   <footer>Independent tool — not affiliated with, endorsed by, or sponsored by DraftKings. DraftKings is a trademark of its owner.</footer>
 </main>
 <script src="/site.js"></script>
+<script>window.dkbbSuggest(document.getElementById("find"), "user", (r) => { location.href = "/?u=" + encodeURIComponent(r.username); });</script>
 </body>
 </html>
