@@ -134,15 +134,13 @@
   if (sections) for (const [section, list] of Object.entries(sections)) if (Array.isArray(list)) for (const c of list) all.push({ section, ...c });
   const everyBestBall = all.filter(isBestBall).sort((a, b) => (b.ContestId ?? 0) - (a.ContestId ?? 0));
   // dkbbdb is a season leaderboard: contests that start after NFL week 1 are left out (the site says where week 1 ends)
-  let bestBall = everyBestBall, late = 0;
+  let bestBall = everyBestBall;
   function applyCutoff(startsBefore) {
     const cut = Date.parse(startsBefore ?? "");
     if (!isFinite(cut)) return;
     // (a later ROUND of a week-1 tournament is the same contest, not a late start)
     bestBall = everyBestBall.filter((c) => { const t = Date.parse(c.ContestStartDate ?? ""); return !isFinite(t) || t < cut || (c.MegaContestRoundNumber ?? 1) > 1; });
-    late = everyBestBall.length - bestBall.length;
   }
-  const lateTxt = () => late ? `\n${late} left out: ${late === 1 ? "it starts" : "they start"} after Week 1, and dkbbdb tracks season-long contests only.` : "";
   const teamsTxt = (n) => `${n} team${n === 1 ? "" : "s"}`;
 
   const panel = document.createElement("div");
@@ -174,7 +172,7 @@
     applyCutoff(known.startsBefore);
     const have = new Set((known.complete ?? []).map(String));
     const fresh = bestBall.filter((c) => !have.has(String(c.UserContestId))).length;
-    status.textContent = `Found ${teamsTxt(bestBall.length)} of season-long Best Ball on this account — ${fresh ? `${fresh} not on dkbbdb yet` : "all already on dkbbdb"}.` + lateTxt();
+    status.textContent = `Found ${teamsTxt(bestBall.length)} of season-long Best Ball on this account — ${fresh ? `${fresh} not on dkbbdb yet` : "all already on dkbbdb"}.`;
     btn.disabled = bestBall.length === 0;
   });
   const showLink = (text, href) => { link.textContent = text; link.href = href; link.style.display = "block"; };
@@ -229,7 +227,7 @@
     }
     const problems = [...errors, ...serverErrors];
     status.textContent = `Done — ${teamsTxt(bestBall.length)} on dkbbdb (${todo.length} new or updated).` +
-      lateTxt() + (problems.length ? `\n${problems.length} problem${problems.length === 1 ? "" : "s"}:\n${problems.slice(0, 4).join("\n")}` : "");
+      (problems.length ? `\n${problems.length} problem${problems.length === 1 ? "" : "s"}:\n${problems.slice(0, 4).join("\n")}` : "");
     const names = [...usernames];
     bg({ type: "SYNCED", usernames: names, teams: bestBall.length });
     if (names.length) showLink(`Open ${names[0]} on dkbbdb ↗`, `https://dkbbdb.com/u/${encodeURIComponent(names[0])}`);
