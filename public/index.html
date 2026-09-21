@@ -78,7 +78,7 @@
 
     // active username / player filters
     const chips = [];
-    if (f.u) chips.push(`<span class="tag">${esc(f.u)}<button data-clear="u" aria-label="Clear username">✕</button></span><a class="sub" href="/u/${encodeURIComponent(f.u)}">full portfolio: exposure, balance →</a>`);
+    if (f.u) chips.push(`<span class="tag">${esc(f.u)}<button data-clear="u" aria-label="Clear username">✕</button></span>`);
     for (const p of f.p) chips.push(`<span class="tag"><b class="pos ${esc(p.pos)}">${esc(p.pos)}</b>${esc(p.name)} <i>${esc(p.team ?? "")}</i><button data-clear="p" data-id="${p.id}" aria-label="Remove ${esc(p.name)}">✕</button></span>`);
     if (f.p.length && f.p.length < 5) chips.push(`<span class="sub" style="color:var(--muted)">add another player to see teams with ${f.p.length === 1 ? "both" : "all of them"}</span>`);
     $("active").innerHTML = chips.join(""); $("active").hidden = !chips.length;

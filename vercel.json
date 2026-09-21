@@ -27,8 +27,10 @@
     }
   ],
   "rewrites": [
-    { "source": "/u/:name", "destination": "/app" },
-    { "source": "/team/:id", "destination": "/app" }
+    {
+      "source": "/team/:id",
+      "destination": "/app"
+    }
   ],
   "redirects": [
     {
@@ -41,6 +43,11 @@
       ],
       "destination": "https://dkbbdb.com/$1",
       "permanent": true
+    },
+    {
+      "source": "/u/:name",
+      "destination": "/?u=:name",
+      "permanent": false
     }
   ]
 }

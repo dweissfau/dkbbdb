@@ -2,7 +2,7 @@
 //   1. Reads the `var contests = {...}` blob already embedded in the page (your own entries).
 //   2. For every Best Ball entry dkbbdb does not have yet, fetches its draft board (draftStatus) with your
 //      signed-in DraftKings session: the same request the site itself makes.
-//   3. Uploads the result to dkbbdb.com (no account: your page is dkbbdb.com/u/<your DraftKings username>).
+//   3. Uploads the result to dkbbdb.com (no account: your teams join the leaderboard under your DraftKings username).
 // No credentials are read or stored. One draft board lists all 12 teams, so nothing else is requested.
 
 (() => {
@@ -231,7 +231,7 @@
       (problems.length ? `\n${problems.length} problem${problems.length === 1 ? "" : "s"}:\n${problems.slice(0, 4).join("\n")}` : "");
     const names = [...usernames];
     bg({ type: "SYNCED", usernames: names, teams: bestBall.length });
-    if (names.length) showLink(`Open ${names[0]} on dkbbdb ↗`, `https://dkbbdb.com/u/${encodeURIComponent(names[0])}`);
+    if (names.length) showLink(`See ${names[0]} on the leaderboard ↗`, `https://dkbbdb.com/?u=${encodeURIComponent(names[0])}`);
     else showLink("Open dkbbdb ↗", "https://dkbbdb.com/");
     btn.disabled = false;
   });
