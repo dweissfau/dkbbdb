@@ -77,6 +77,11 @@
   const day = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—";
   const agoTxt = (iso) => { const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000)); return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : `${(s / 3600).toFixed(1)} h ago`; };
   const posTag = (p) => `<b class="pos ${esc(p)}">${esc(p)}</b>`;
+  // NFL team logo (ESPN's CDN) left of a player's name, as in the team pop-up; free agents / unknown teams get a blank spacer
+  const LOGO_ABBR = { WAS: "wsh" };
+  const logo = (team) => { const t = String(team ?? "").toUpperCase(); return /^[A-Z]{2,3}$/.test(t) && t !== "FA" && t !== "TBD"
+    ? `<img class="tlogo" src="https://a.espncdn.com/i/teamlogos/nfl/500/${LOGO_ABBR[t] ?? t.toLowerCase()}.png" alt="${esc(t)}" title="${esc(t)}" loading="lazy" onerror="this.style.visibility='hidden'">`
+    : `<span class="tlogo"></span>`; };
   const PAGE = 100;
 
   // the whole state lives in the address, so any view can be shared or bookmarked:
@@ -96,7 +101,7 @@
       [null, "Tournament", "contest col-contest", (t) => esc(t.contest)], ["buyIn", "Buy-in", "num col-buyin", (t) => money(t.buyIn)], ["date", "Drafted", "col-date", (t) => day(t.date)],
       ["rank", "League place", "col-place", (t) => `${t.rank ?? "—"} / ${t.entrants ?? "—"}`], ["gap", "Cut line", "", gapChip],
       ["left", "Left", "num col-left", (t) => t.left ?? "—"], ["points", "Points", "num", (t) => `<b>${pts(t.points)}</b>`]],
-    players: [[null, "", "rk num", (r) => r.n], ["name", "Player", "user", (r) => `${posTag(r.pos)} <span class="pname">${esc(r.name)}</span> <i class="pteam">${esc(r.team ?? "")}</i>`],
+    players: [[null, "", "rk num", (r) => r.n], ["name", "Player", "user", (r) => `${posTag(r.pos)} ${logo(r.team)}<span class="pname">${esc(r.name)}</span>`],
       ["teams", "Teams", "num", (r) => r.teams], ["own", L("Ownership", "Own"), "num", (r) => pc1(r.own)], ["advancing", "Advancing", "num col-buyin", (r) => r.advancing],
       ["advRate", L("Advance rate", "Adv %"), "num", (r) => pc1(r.advRate)], ["avgPick", "Avg pick", "num col-date", (r) => r.avgPick ?? "—"]],
     users: [[null, "", "rk num", (r) => r.n], ["user", "User", "user", (r) => `<span class="pname">${esc(r.user)}</span>`], ["teams", "Teams", "num", (r) => r.teams],

@@ -145,3 +145,6 @@ td.user .pos { margin-right: 4px; }
   td.user { white-space: normal; }
   .pname { overflow-wrap: anywhere; }
 }
+
+/* team logo left of a player's name (same as the team pop-up) */
+.tlogo { display: inline-block; width: 18px; height: 18px; vertical-align: middle; margin-right: 5px; object-fit: contain; }
