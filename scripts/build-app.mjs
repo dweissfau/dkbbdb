@@ -36,6 +36,7 @@ js = swap(js,
   `const res = await fetch("live/", { headers: LIVE.etag ? { "If-None-Match": LIVE.etag } : {}, cache: "no-store", credentials: "same-origin" });`,
   `const res = await fetch("/api/live", { headers: { ...(LIVE.etag ? { "If-None-Match": LIVE.etag } : {}), Authorization: "Bearer " + await window.dkbbToken() }, cache: "no-store" });`,
   "live fetch");
+js = swap(js, `applyLive(await res.json());`, `applyLive(window.dkbbExpand(await res.json()));`, "expand compact view");
 js = swap(js,
   `    ["My effective buy-ins", fmt$(myFees),
       shared.length ? \`of \${fmt$(fees)} total — partners carry the rest\` : "no shared teams marked yet"],

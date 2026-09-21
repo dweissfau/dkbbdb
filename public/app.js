@@ -1309,7 +1309,7 @@ async function pollLive() {
     if (res.status === 304) { LIVE.ok = true; return; }
     if (!res.ok) { LIVE.ok = false; return; }
     LIVE.etag = res.headers.get("etag");
-    applyLive(await res.json());
+    applyLive(window.dkbbExpand(await res.json()));
     LIVE.ok = true;
   } catch { LIVE.ok = false; }
 }

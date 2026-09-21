@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; width: 300px; background: #0d0d0d; color: #fff; font: 13px/1.5 system-ui, -apple-system, sans-serif; padding: 14px 16px; }
+  h1 { font-size: 14px; margin: 0 0 8px; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #666; margin-right: 6px; vertical-align: middle; }
+  .dot.on { background: #0ca30c; box-shadow: 0 0 6px #0ca30c; }
+  .muted { color: #898781; font-size: 12px; }
+  a { color: #3987e5; }
+  a.btn { display: block; text-align: center; background: #3987e5; color: #fff; font-weight: 700; text-decoration: none; border-radius: 6px; padding: 8px 10px; margin-top: 10px; }
+  input { width: 100%; box-sizing: border-box; margin-top: 6px; padding: 6px 8px; border-radius: 6px; border: 1px solid #383835; background: #1a1a19; color: #fff; font: inherit; }
+  details { margin-top: 10px; }
+</style>
+</head>
+<body>
+  <h1><span class="dot" id="dot"></span>dkbbdb sync</h1>
+  <div id="state" class="muted">Loading…</div>
+  <div id="last" class="muted"></div>
+  <a class="btn" id="main" href="https://dkbbdb.com/connect" target="_blank">Connect to dkbbdb</a>
+  <details><summary class="muted">Have a connection code?</summary>
+    <input id="code" placeholder="dkbb_…" autocomplete="off" spellcheck="false"><div id="codeMsg" class="muted"></div></details>
+  <div class="muted" style="margin-top:10px;font-size:11px">Reads only your own drafts, from your signed-in DraftKings tab. Independent tool — not affiliated with, endorsed by, or sponsored by DraftKings.</div>
+  <script src="popup.js"></script>
+</body>
+</html>

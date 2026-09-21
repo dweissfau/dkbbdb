@@ -23,6 +23,12 @@ w.console.error = (...a) => errors.push(a.join(" "));
 w.matchMedia ??= () => ({ matches: false, addEventListener() {}, addListener() {} });
 w.__DK = portfolio;
 w.dkbbToken = async () => "test";
+// the real expander from boot.js (evaluated alone: boot.js itself needs Clerk)
+{
+  const boot = fs.readFileSync(path.join(ROOT, "public", "boot.js"), "utf8");
+  const from = boot.indexOf("window.dkbbExpand ="), to = boot.indexOf("window.dkbbToken =");
+  w.eval(boot.slice(from, to));
+}
 let liveCalls = 0;
 w.fetch = async (url, init) => { liveCalls++; if (url !== "/api/live" || init.headers.Authorization !== "Bearer test") throw new Error("unexpected fetch " + url);
   return { status: 200, ok: true, headers: { get: () => '"x"' }, json: async () => JSON.parse(JSON.stringify(view)) }; };
@@ -50,6 +56,9 @@ for (const tab of ["exposure", "balance", "overview", "rosters", "analytics"]) {
   const sec = d.getElementById("tab-" + tab);
   ok(`${tab} tab renders`, sec.classList.contains("on") && sec.textContent.trim().length > 50, `${sec.textContent.trim().length} chars`);
 }
+const row0 = Object.values(Object.values(w.dkbbExpand(JSON.parse(JSON.stringify(view))).opp.rosters)[0])[0][0];
+ok("roster rows expanded back to 10 fields", row0.length === 10 && (row0[5] == null || typeof row0[5] === "string"), JSON.stringify(row0));
+ok("live view fits Vercel's 4.5 MB response cap", JSON.stringify(view).length < 3.0e6, `${(JSON.stringify(view).length / 1e6).toFixed(2)} MB`);
 ok("no script errors", errors.length === 0, errors.slice(0, 3).join(" || "));
 console.log(checks.every(Boolean) ? `\nall ${checks.length} checks pass` : `\n${checks.filter((c) => !c).length} FAILED`);
 process.exit(checks.every(Boolean) ? 0 : 1);

@@ -25,5 +25,18 @@
         }
       ]
     }
+  ],
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.dkbbdb.com"
+        }
+      ],
+      "destination": "https://dkbbdb.com/$1",
+      "permanent": true
+    }
   ]
 }
