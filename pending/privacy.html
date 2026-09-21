@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy · dkbbdb</title>
+<link rel="icon" href="/favicon.png">
+<link rel="stylesheet" href="/site.css">
+</head>
+<body>
+<div class="bar">
+  <a class="brand" href="/">dkbbdb</a>
+  <div class="spacer"></div>
+  <a class="btn primary" href="/connect">Add your teams</a>
+</div>
+<main class="narrow doc">
+  <h1>Privacy</h1>
+  <p class="lead">dkbbdb is a free leaderboard for DraftKings best ball teams. It has no accounts, no ads and no tracking. This page says exactly what it stores and how to have it removed.</p>
+
+  <div class="step">
+    <h2>What the extension reads</h2>
+    <p>The extension runs only on your DraftKings contests page, and only when you click <b>Sync to dkbbdb</b>. It reads your own paid, season-long best ball entries and the draft board of each one (the 12 usernames in the league and who drafted whom), using the DraftKings session already open in your browser.</p>
+    <p>It never reads or sends your DraftKings password, cookies, email, balance, payment details, or any contest that is not best ball.</p>
+  </div>
+
+  <div class="step">
+    <h2>What dkbbdb stores</h2>
+    <p>For each synced team: the contest name, buy-in and size, the draft date, the DraftKings usernames in that league, every team's drafted players, and any prize DraftKings reports for your entry. Scores are not taken from DraftKings: they are worked out from public NFL statistics.</p>
+    <p>For every upload, a log line: the time, the DraftKings usernames synced, how many teams, and a scrambled code standing in for the sender's internet address (used to stop abuse). The address itself is never stored.</p>
+  </div>
+
+  <div class="step">
+    <h2>What is public</h2>
+    <p>Everything you sync. Anyone can look up a DraftKings username that has been synced and see those teams, and they appear on the leaderboard. Only people who sync themselves can be looked up: the opponents in your leagues appear inside the league view, as they do on DraftKings, but cannot be searched.</p>
+  </div>
+
+  <div class="step">
+    <h2>What is never collected</h2>
+    <p>No names, emails, passwords, payment information, location, browsing history or advertising identifiers. The site sets no cookies and uses no analytics or third-party trackers. Nothing is sold or shared with anyone.</p>
+  </div>
+
+  <div class="step">
+    <h2>Removing your teams</h2>
+    <p>Email <a id="mail" href="#">the address below</a> from any address with your DraftKings username and your teams are deleted, usually within a day. Uninstalling the extension stops any further syncing immediately.</p>
+    <p class="muted" id="mailText"></p>
+  </div>
+
+  <footer>Independent tool — not affiliated with, endorsed by, or sponsored by DraftKings. DraftKings is a trademark of its owner. Last updated September 2026.</footer>
+</main>
+<script>
+// assembled here so the address is not harvested from the page source
+(() => { const a = ["remove", "dkbbdb.com"].join("@"); const m = document.getElementById("mail"); m.href = "mailto:" + a + "?subject=Remove%20my%20teams"; m.textContent = a; })();
+</script>
+</body>
+</html>

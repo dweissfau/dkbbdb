@@ -20,7 +20,7 @@ function swap(where, from, to, label) {
 }
 
 // ---- markup ----
-html = swap(html, "<title>DK Best Ball Portfolio</title>", "<title>dkbbdb</title>", "title");
+html = swap(html, "<title>DK Best Ball Portfolio</title>", `<title>dkbbdb</title>\n<link rel="icon" href="/favicon.png">`, "title");
 html = swap(html, "<h1>DK Best Ball Portfolio</h1>", `<h1><a href="/" style="color:inherit;text-decoration:none">dkbbdb</a> <span id="who" style="font-weight:400;color:var(--ink-2)"></span></h1>`, "h1");
 html = swap(html, `<button class="btn" id="exportCsv">`, `<a class="btn" href="/" style="text-decoration:none">Leaderboard</a>\n  <a class="btn" href="/connect" style="text-decoration:none">Add your teams</a>\n  <button class="btn" id="exportCsv">`, "header links");
 html = swap(html, "</style>", `
