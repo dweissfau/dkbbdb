@@ -279,3 +279,9 @@ td.user .pos { margin-right: 4px; }
   .profile td.empty { grid-column: 1 / -1; display: block; }
   .profile .more { padding-bottom: 8px; }
 }
+
+/* player suggestions: badge · logo · name on the left, team count on the right */
+.hits button { align-items: center; }
+.hits button .who { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
+.hits button .who .tlogo { margin: 0; }
+.hits button .who .pname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
