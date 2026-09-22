@@ -1,4 +1,5 @@
-# Zip dkbbdb/extension for the Chrome Web Store → store/dkbbdb-extension-<version>.zip (+ the 128 px store icon).
+# Zip dkbbdb/extension for the Chrome Web Store → store/dkbbdb-extension-<version>.zip (+ the 128 px store icon),
+# and a copy at public/dkbbdb-extension.zip — the download link on the home page (deploy after running this).
 #   python scripts/package-extension.py
 import json, os, shutil, zipfile
 
@@ -13,4 +14,5 @@ with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
             full = os.path.join(folder, f)
             z.write(full, os.path.relpath(full, ext).replace(os.sep, "/"))
 shutil.copyfile(os.path.join(ext, "icons", "icon128.png"), os.path.join(out, "icon-128.png"))
+shutil.copyfile(path, os.path.join(ROOT, "public", "dkbbdb-extension.zip"))
 print(path, os.path.getsize(path), "bytes:", ", ".join(zipfile.ZipFile(path).namelist()))

@@ -24,6 +24,23 @@
           "value": "public, max-age=0, must-revalidate"
         }
       ]
+    },
+    {
+      "source": "/dkbbdb-extension.zip",
+      "headers": [
+        {
+          "key": "content-type",
+          "value": "application/zip"
+        },
+        {
+          "key": "content-disposition",
+          "value": "attachment; filename=\"dkbbdb-extension.zip\""
+        },
+        {
+          "key": "cache-control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
     }
   ],
   "rewrites": [
