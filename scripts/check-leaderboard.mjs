@@ -21,7 +21,7 @@ ok("username filter (case-insensitive)", byU.total === 10 && byU.rows.every((r) 
 // the profile page's header comes with the same response
 const P = byU.profile;
 ok("profile for a username: teams, buy-ins, split, tournaments, best team", P && P.user === "fleaflick" && P.teams === 10 && P.buyIn === byU.rows.reduce((s, r) => s + (r.buyIn ?? 0), 0)
-  && P.tournaments.reduce((s, t) => s + t.teams, 0) === 10 && P.advancing + P.out + P.unranked === 10 && P.best.points === Math.max(...byU.rows.map((r) => r.points)) && byU.rows.some((r) => r.id === P.best.id),
+  && P.tournaments.reduce((s, t) => s + t.teams, 0) === 10 && P.advancing + P.out + P.unranked === 10 && P.advBuyIn === byU.rows.filter((r) => r.adv).reduce((s, r) => s + r.buyIn, 0) && P.advBuyIn <= P.buyIn && P.best.points === Math.max(...byU.rows.map((r) => r.points)) && byU.rows.some((r) => r.id === P.best.id),
   `${P?.teams} teams · $${P?.buyIn} · advancing ${P?.advancing}, out ${P?.out}, not started ${P?.unranked} · best ${P?.best?.points} (${P?.best?.contest})`);
 ok("profile ignores the tournament filter and is null without a username", (await playersView(db, { u: "fleaflick", t: P.tournaments[0].name })).profile.teams === 10 && all.profile === null);
 ok("unknown username → empty profile", (await leaderboard(db, { u: "nobody-xyz" })).profile.teams === 0);

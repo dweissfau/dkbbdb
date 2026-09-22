@@ -124,7 +124,7 @@
     $("sub").textContent = `DraftKings best ball · ${plural(P.teams, "team")} · NFL week ${data.week}`;
     const ranked = P.advancing + P.out, tiles = [
       ["Teams", P.teams.toLocaleString(), `in ${plural(P.tournaments.length, "tournament")}`],
-      ["Entry fees", money(P.buyIn), P.teams ? `${money(Math.round(P.buyIn / P.teams))} a team` : ""],
+      ["Entry fees", money(P.buyIn), ranked ? `${money(P.advBuyIn)} on advancing teams` : ""],
       ["Advancing", P.advancing.toLocaleString(), ranked ? `${pct(P.advancing, ranked)} of ${plural(ranked, "team")} with a league place` : "no league places yet"],
       ["Best team", P.best ? pts(P.best.points) : "—", P.best ? `${P.best.rank ?? "—"} of ${P.best.entrants ?? "—"} · ${P.best.contest}` : "", P.best?.id]];
     $("tiles").innerHTML = tiles.map(([k, v, d, id]) => `<div class="tile${id ? " link" : ""}"${id ? ` data-id="${esc(id)}" tabindex="0" title="Open this team's league"` : ""}><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="d" title="${esc(d)}">${esc(d)}</div></div>`).join("");
