@@ -282,14 +282,14 @@ td.user .pos { margin-right: 4px; }
 
 /* player suggestions: badge · logo · name on the left, team count on the right */
 .hits button { align-items: center; }
-.hits button .who { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
-.hits button .who .tlogo { margin: 0; }
-.hits button .who .pname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hits button .who { color: var(--ink); font-size: 14px; }
-.hits button .who .pname { color: var(--ink); font-size: 14px; }
+.hits button .hit { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
+.hits button .hit .tlogo { margin: 0; }
+.hits button .hit .pname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hits button .hit { color: var(--ink); font-size: 14px; }
+.hits button .hit .pname { color: var(--ink); font-size: 14px; }
 /* long names: one line per row — the list may grow wider than the box, then the name gets an ellipsis, the count never wraps */
 .hits { right: auto; min-width: 100%; max-width: min(400px, calc(100vw - 32px)); }
 .hits button { flex-wrap: nowrap; white-space: nowrap; }
-.hits button .who { flex: 1 1 auto; }
-.hits button .who .pname { min-width: 0; }
+.hits button .hit { flex: 1 1 auto; }
+.hits button .hit .pname { min-width: 0; }
 .hits button > span:last-child { flex: none; }

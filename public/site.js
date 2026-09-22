@@ -25,7 +25,7 @@ window.dkbbSuggest = (form, type, onPick, scope = {}) => {
         last = results;
         hits.replaceChildren(...(results.length ? results.map((r) => {
           const b = document.createElement("button");
-          b.type = "button"; b.innerHTML = `<span class="who">${label(r)}</span><span>${sub(r)}</span>`;
+          b.type = "button"; b.innerHTML = `<span class="hit">${label(r)}</span><span>${sub(r)}</span>`;
           b.onclick = () => pick(r);
           return b;
         }) : [Object.assign(document.createElement("div"), { className: "none", textContent: type === "player" ? "Nobody has a player by that name" : "No synced teams under that name yet" })]));
