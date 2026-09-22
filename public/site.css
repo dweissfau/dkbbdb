@@ -201,3 +201,11 @@ td.user .pos { margin-right: 4px; }
   .profile td.contest { white-space: normal; color: var(--ink); font-weight: 600; font-size: 13.5px; }
   .profile .head .note { flex-basis: 100%; }
 }
+
+/* home page = the add-your-teams steps; a visitor who came from the extension gets a card back to their own page */
+.h { font-size: 24px; margin: 4px 0 4px; letter-spacing: -.3px; }
+.mine { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--surface); border: 1px solid var(--accent); border-radius: 10px; padding: 12px 16px; margin: 0 0 20px; color: var(--ink); text-decoration: none; }
+.mine b { font-size: 18px; }
+.mine .go { color: var(--accent); font-weight: 600; white-space: nowrap; }
+.mine:hover { background: #222220; }
+.mono { font-family: ui-monospace, Consolas, monospace; font-size: 13px; color: var(--ink); }

@@ -46,8 +46,14 @@ ok("the frame closes on the pop-up's message", !d.querySelector("iframe.teamfram
 click(d.querySelector(".tile.link")); await wait(300);
 ok("the best-team tile opens its league", !!d.querySelector("iframe.teamframe"));
 ok("no script errors", errors.length === 0, errors.slice(0, 3).join(" | "));
+ok("no username search anywhere on the page", !d.querySelector("#find") && ![...d.querySelectorAll("input")].some((i) => /username/i.test(i.placeholder + i.getAttribute("aria-label"))));
+const hdr = { headers: process.env.VERCEL_OIDC_TOKEN ? { "x-vercel-trusted-oidc-idp-token": process.env.VERCEL_OIDC_TOKEN } : {} };
+ok("api: username search is gone", (await (await fetch(`${site}/api/search?type=user&q=kkn`, hdr)).json()).results.length === 0);
+ok("api: player search needs the account and counts only its teams", (await (await fetch(`${site}/api/search?type=player&q=justin`, hdr)).json()).results.length === 0
+  && (await (await fetch(`${site}/api/search?type=player&q=justin&u=fleaflick`, hdr)).json()).results.every((r) => r.teams <= 10));
+ok("api: the whole-field board is not served", (await fetch(`${site}/api/leaderboard?limit=1`, hdr)).status === 404);
 
 const nobody = boot(`${site}/u/nobody-xyz-123`); await wait(5000);
-ok("unknown username → 'no teams yet' with the connect link", /No teams under/.test(text(nobody.d.getElementById("panel"))) && !!nobody.d.querySelector('#panel a[href="/connect"]') && nobody.d.querySelectorAll(".tile").length === 0, text(nobody.d.getElementById("panel")).slice(0, 80));
+ok("unknown username → 'no teams yet' with the connect link", /No teams under/.test(text(nobody.d.getElementById("panel"))) && !!nobody.d.querySelector('#panel a[href="/"]') && nobody.d.querySelectorAll(".tile").length === 0, text(nobody.d.getElementById("panel")).slice(0, 80));
 console.log(checks.every(Boolean) ? `\nall ${checks.length} checks pass` : `\n${checks.filter((c) => !c).length} FAILED`);
 process.exit(checks.every(Boolean) ? 0 : 1);

@@ -59,6 +59,11 @@
       ],
       "destination": "/u/:name",
       "permanent": false
+    },
+    {
+      "source": "/connect",
+      "destination": "/",
+      "permanent": true
     }
   ]
 }

@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>dkbbdb — DraftKings best ball teams, scored live</title>
-<meta name="description" content="Look up a DraftKings username to see its best ball teams: league place, cut line, points and player exposure, scored live from public NFL stats. Add your own teams in a minute, no sign-up.">
-<meta property="og:title" content="dkbbdb — DraftKings best ball teams, scored live">
-<meta property="og:description" content="League place, cut line, points and player exposure for every one of your DraftKings best ball teams. Add your teams in a minute, no sign-up.">
+<title>dkbbdb — your DraftKings best ball teams, scored live</title>
+<meta name="description" content="Sync your DraftKings best ball teams once and get a page with every team's league place, cut line and points, and your player exposure, scored live from public NFL stats. No sign-up.">
+<meta property="og:title" content="dkbbdb — your DraftKings best ball teams, scored live">
+<meta property="og:description" content="League place, cut line, points and player exposure for every one of your DraftKings best ball teams. About a minute, no sign-up.">
 <meta property="og:image" content="https://dkbbdb.com/og.png">
 <meta property="og:url" content="https://dkbbdb.com/">
 <meta property="og:type" content="website">
@@ -14,9 +14,9 @@
 <link rel="icon" href="/favicon.png">
 <link rel="stylesheet" href="/site.css">
 <script>
-// older links (the extension's "See <name>" link, shared team links) go to the pages that replaced them
+// the extension's "See <name>" link (/?u=<name>) and older shared team links go to the pages that replaced them
 (() => { const sp = new URLSearchParams(location.search), u = sp.get("u"), team = sp.get("team");
-  if (u) location.replace("/u/" + encodeURIComponent(u.split(",")[0].trim()));
+  if (u) location.replace("/u/" + encodeURIComponent(u.split(",")[0].trim()) + "?u=" + encodeURIComponent(u.split(",")[0].trim()));
   else if (team) location.replace("/team/" + encodeURIComponent(team)); })();
 </script>
 </head>
@@ -24,19 +24,35 @@
 <div class="bar">
   <a class="brand" href="/">dkbbdb</a>
 </div>
-<main class="home">
-  <h1>Look up a DraftKings username</h1>
-  <p>Every season-long best ball team under that name: league place, cut line, points and player exposure, scored live from public NFL stats.</p>
-  <form class="find" id="find" autocomplete="off">
-    <input type="search" placeholder="DraftKings username" aria-label="DraftKings username" spellcheck="false" autocapitalize="off" autofocus>
-    <div class="hits" hidden></div>
-  </form>
-  <p class="or">Not on dkbbdb yet?</p>
-  <a class="btn primary big" href="/connect">Add your teams</a>
-  <p class="hint">A Chrome extension reads your drafts from DraftKings — about a minute, no sign-up.</p>
+<main class="narrow">
+  <a class="mine" id="mine" hidden><span><b id="mineName"></b><br><span class="muted">your page</span></span><span class="go">Open →</span></a>
+
+  <h1 class="h">Add your DraftKings best ball teams</h1>
+  <p class="lead">Two steps, about a minute, no sign-up. You need a computer with Chrome for this part; after that, any phone works.</p>
+
+  <div class="step">
+    <h2><span class="num">1</span>Install the extension</h2>
+    <p>DraftKings only shows your drafts to your own signed-in browser, so a small Chrome extension reads them for you. It never sees your DraftKings password, and it only runs on your DraftKings contests page.</p>
+    <p class="muted">The extension is in private beta — ask for the install link.</p>
+  </div>
+
+  <div class="step">
+    <h2><span class="num">2</span>Sync your teams</h2>
+    <p>Open your DraftKings contests page while signed in to DraftKings, then click <b>Sync to dkbbdb</b> in the panel at the top right. When it finishes it links straight to your page.</p>
+    <p><a class="btn primary" href="https://www.draftkings.com/mycontests" target="_blank" rel="noopener">Open DraftKings contests ↗</a></p>
+    <p class="muted">Sync again whenever you draft new teams, and once after each playoff round when teams move to new leagues. Scores update on their own.</p>
+  </div>
+
+  <div class="step">
+    <h2>What you get</h2>
+    <p>One page for your account: every season-long team's league place, cut line and points, and your exposure to every player — scored live from public NFL stats. There is no search on the site; your page is at <span class="mono">dkbbdb.com/u/your-username</span> and anyone you give that link to can see it.</p>
+  </div>
+
   <footer>Independent tool — not affiliated with, endorsed by, or sponsored by DraftKings. DraftKings is a trademark of its owner. · <a href="/privacy">Privacy</a></footer>
 </main>
-<script src="/site.js"></script>
-<script>window.dkbbSuggest(document.getElementById("find"), "user", (r) => { location.href = "/u/" + encodeURIComponent(r.username); });</script>
+<script>
+// a visitor who has arrived at their own page from the extension gets a shortcut back to it
+try { const me = localStorage.getItem("dkbbdb-me"); if (me) { const a = document.getElementById("mine"); a.href = "/u/" + encodeURIComponent(me); document.getElementById("mineName").textContent = me; a.hidden = false; } } catch { /* private window */ }
+</script>
 </body>
 </html>

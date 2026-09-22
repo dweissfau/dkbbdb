@@ -1,5 +1,7 @@
 // Boot the field leaderboard page (/leaderboard, kept but unlinked) in jsdom against the LIVE api and click through it: tabs, sorting, filters, row clicks.
 //   node scripts/smoke-front.mjs [site]
+// The api only serves the whole field with DKBBDB_FIELD=1 set on the deployment, so this runs against a local
+// stack (vercel dev with that variable exported), not against dkbbdb.com.
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";

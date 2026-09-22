@@ -27,6 +27,8 @@ ok("profile ignores the tournament filter and is null without a username", (awai
 ok("unknown username → empty profile", (await leaderboard(db, { u: "nobody-xyz" })).profile.teams === 0);
 
 const found = await searchPlayers(db, process.argv[2] ?? "justin jefferson");
+const mineOnly = await searchPlayers(db, "on", "fleaflick");
+ok("player search within one account: only his players, counted over his teams", mineOnly.length > 0 && mineOnly.every((r) => r.teams >= 1 && r.teams <= 10) && (await searchPlayers(db, "zzzz", "fleaflick")).length === 0, `${mineOnly.length} hits, top ${mineOnly[0]?.name} on ${mineOnly[0]?.teams}`);
 ok("player suggestions", found.length >= 1, JSON.stringify(found.slice(0, 3)));
 const p = found[0];
 const byP = await leaderboard(db, { p: p.id, limit: 200 });

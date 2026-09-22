@@ -1,7 +1,7 @@
-// Suggestion box used by the leaderboard filters (front page) and the top-bar search (connect page):
-//   dkbbSuggest(formEl, "user" | "player", onPick)   → onPick(result) with a row of /api/search
-// Enter picks the first suggestion (or, for usernames, the typed text); Esc / click-away closes the list.
-window.dkbbSuggest = (form, type, onPick) => {
+// Suggestion box for the profile page's player filter:
+//   dkbbSuggest(formEl, "player", onPick, { u: username })   → onPick(result) with a row of /api/search
+// Enter picks the first suggestion; Esc / click-away closes the list.
+window.dkbbSuggest = (form, type, onPick, scope = {}) => {
   const q = form.querySelector("input"), hits = form.querySelector(".hits");
   let timer = 0, seq = 0, last = [];
   const label = (r) => type === "player" ? `${r.name}` : r.username;
@@ -14,7 +14,7 @@ window.dkbbSuggest = (form, type, onPick) => {
     timer = setTimeout(async () => {
       const mine = ++seq;
       try {
-        const { results } = await (await fetch(`/api/search?type=${type}&q=${encodeURIComponent(s)}`)).json();
+        const { results } = await (await fetch(`/api/search?type=${type}&q=${encodeURIComponent(s)}${scope.u ? "&u=" + encodeURIComponent(scope.u) : ""}`)).json();
         if (mine !== seq) return;
         last = results;
         hits.replaceChildren(...(results.length ? results.map((r) => {
@@ -33,6 +33,5 @@ window.dkbbSuggest = (form, type, onPick) => {
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     if (last.length) pick(last[0]);
-    else if (type === "user" && q.value.trim()) pick({ username: q.value.trim() });
   });
 };
