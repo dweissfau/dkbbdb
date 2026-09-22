@@ -286,3 +286,4 @@ td.user .pos { margin-right: 4px; }
 .hits button .who .tlogo { margin: 0; }
 .hits button .who .pname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hits button .who { color: var(--ink); font-size: 14px; }
+.hits button .who .pname { color: var(--ink); font-size: 14px; }
