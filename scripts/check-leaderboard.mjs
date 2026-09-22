@@ -18,6 +18,13 @@ ok("tournament filter", byT.total === all.tournaments[0].teams && byT.rows.every
 
 const byU = await leaderboard(db, { u: "FLEAFLICK" });
 ok("username filter (case-insensitive)", byU.total === 10 && byU.rows.every((r) => r.user === "fleaflick"), `${byU.total} teams, filter.u = ${byU.filter.u}`);
+// the profile page's header comes with the same response
+const P = byU.profile;
+ok("profile for a username: teams, buy-ins, split, tournaments, best team", P && P.user === "fleaflick" && P.teams === 10 && P.buyIn === byU.rows.reduce((s, r) => s + (r.buyIn ?? 0), 0)
+  && P.tournaments.reduce((s, t) => s + t.teams, 0) === 10 && P.advancing + P.out + P.unranked === 10 && P.best.points === Math.max(...byU.rows.map((r) => r.points)) && byU.rows.some((r) => r.id === P.best.id),
+  `${P?.teams} teams · $${P?.buyIn} · advancing ${P?.advancing}, out ${P?.out}, not started ${P?.unranked} · best ${P?.best?.points} (${P?.best?.contest})`);
+ok("profile ignores the tournament filter and is null without a username", (await playersView(db, { u: "fleaflick", t: P.tournaments[0].name })).profile.teams === 10 && all.profile === null);
+ok("unknown username → empty profile", (await leaderboard(db, { u: "nobody-xyz" })).profile.teams === 0);
 
 const found = await searchPlayers(db, process.argv[2] ?? "justin jefferson");
 ok("player suggestions", found.length >= 1, JSON.stringify(found.slice(0, 3)));

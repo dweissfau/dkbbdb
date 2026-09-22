@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dkbbdb</title>
+<meta name="description" content="A DraftKings best ball portfolio on dkbbdb: every team's league place, cut line and points, and player exposure, scored live from public NFL stats.">
+<meta property="og:image" content="https://dkbbdb.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.png">
+<link rel="stylesheet" href="/site.css">
+</head>
+<body>
+<div class="bar">
+  <a class="brand" href="/">dkbbdb</a>
+  <form class="find" id="find" autocomplete="off">
+    <input type="search" placeholder="Look up a username" aria-label="Look up a DraftKings username" spellcheck="false" autocapitalize="off">
+    <div class="hits" hidden></div>
+  </form>
+  <div class="spacer"></div>
+  <a class="btn primary" href="/connect">Add your teams</a>
+</div>
+<main class="profile">
+  <header class="who">
+    <div>
+      <h1 id="name">&nbsp;</h1>
+      <div class="sub" id="sub"></div>
+    </div>
+    <span class="note" id="liveNote"></span>
+  </header>
+  <div class="tiles" id="tiles"></div>
+  <div class="split" id="split" hidden>
+    <div class="track"><i class="adv"></i><i class="out"></i><i class="wait"></i></div>
+    <div class="legend"></div>
+  </div>
+
+  <div class="panel" id="panel">
+    <div class="head">
+      <div class="pills" id="tabs" role="tablist">
+        <button class="pill on" data-tab="teams" role="tab">Teams</button>
+        <button class="pill" data-tab="exposure" role="tab">Exposure</button>
+      </div>
+      <select id="fT" aria-label="Tournament"><option value="">All tournaments</option></select>
+      <form class="find" id="fP" autocomplete="off">
+        <input type="search" placeholder="Teams with a player…" aria-label="Player" spellcheck="false">
+        <div class="hits" hidden></div>
+      </form>
+      <div class="pills" id="posPills" hidden>
+        <button class="pill mini on" data-pos="">All</button><button class="pill mini" data-pos="QB">QB</button><button class="pill mini" data-pos="RB">RB</button><button class="pill mini" data-pos="WR">WR</button><button class="pill mini" data-pos="TE">TE</button>
+      </div>
+      <label class="check" id="advWrap"><input type="checkbox" id="advOnly"> Advancing only</label>
+      <div class="spacer"></div>
+      <span class="note" id="count"></span>
+    </div>
+    <div class="active" id="active" hidden></div>
+    <div class="scroll-x">
+      <table>
+        <thead><tr id="thead"></tr></thead>
+        <tbody id="rows"><tr><td class="empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="more" id="more" hidden><button class="btn" id="moreBtn">Show more</button></div>
+  </div>
+  <footer>Independent tool — not affiliated with, endorsed by, or sponsored by DraftKings. DraftKings is a trademark of its owner. · <a href="/privacy">Privacy</a></footer>
+</main>
+<script src="/site.js"></script>
+<script>
+// One DraftKings account's page: /u/<username>. Everything comes from /api/leaderboard filtered to that username
+// (the same scoring as every other page), so the numbers here match the team pop-up to the cent.
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const pts = (n) => n == null ? "—" : Number(n).toFixed(2); // DraftKings shows fantasy points to the cent
+  const pct = (a, b) => b ? `${(100 * a / b).toFixed(1)}%` : "—";
+  const pc1 = (v) => v == null ? "—" : `${Number(v).toFixed(1)}%`;
+  const money = (n) => n == null ? "—" : "$" + Number(n).toLocaleString();
+  const day = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—";
+  const agoTxt = (iso) => { const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000)); return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : `${(s / 3600).toFixed(1)} h ago`; };
+  const plural = (n, w) => `${Number(n).toLocaleString()} ${w}${n === 1 ? "" : "s"}`;
+  const posTag = (p) => `<b class="pos ${esc(p)}">${esc(p)}</b>`;
+  const LOGO_ABBR = { WAS: "wsh" };
+  const logo = (team) => { const t = String(team ?? "").toUpperCase(); return /^[A-Z]{2,3}$/.test(t) && t !== "FA" && t !== "TBD"
+    ? `<img class="tlogo" src="https://a.espncdn.com/i/teamlogos/nfl/500/${LOGO_ABBR[t] ?? t.toLowerCase()}.png" alt="${esc(t)}" title="${esc(t)}" loading="lazy" onerror="this.style.visibility='hidden'">`
+    : `<span class="tlogo"></span>`; };
+  const PAGE = 100;
+
+  const who = decodeURIComponent((/^\/u\/([^/]+)/.exec(location.pathname) ?? [])[1] ?? "").split(",")[0].trim();
+  if (!who) { location.replace("/"); return; }
+  $("name").textContent = who; document.title = `${who} · dkbbdb`;
+
+  // the view lives in the address: /u/<name>?tab=exposure &t=tournament &p=playerId[,id…] &adv=1 &pos=QB &sort=&dir= &team=entryId
+  const sp = new URLSearchParams(location.search);
+  const F = { tab: sp.get("tab") === "exposure" ? "exposure" : "teams", t: sp.get("t") ?? "", p: sp.get("p") ?? "", adv: sp.get("adv") === "1" ? "1" : "",
+    pos: sp.get("pos") ?? "", sort: sp.get("sort") ?? "", dir: sp.get("dir") ?? "", team: sp.get("team") ?? "" };
+  let data = null, rows = [], shown = PAGE;
+
+  const gapChip = (t) => t.gap == null ? (t.adv ? `<span class="chip">Advancing</span>` : t.adv === false ? `<span class="chip out">Out</span>` : `<span class="dim">not started</span>`)
+    : t.adv ? `<span class="chip" title="points ahead of the best team outside the cut line"><span class="lg">Advancing </span>+${pts(t.gap)}</span>`
+    : `<span class="chip out" title="points behind the last team inside the cut line"><span class="lg">Out by </span><span class="sm">−</span>${pts(-t.gap)}</span>`;
+  const place = (t) => t.rank == null ? "—" : `<b>${t.rank}</b><span class="of"> / ${t.entrants ?? "—"}</span>`;
+  const L = (long, short) => `<span class="lg">${long}</span><span class="sm">${short}</span>`;
+  // columns per tab: [sort key | null, label, css class, cell html]
+  const COLS = {
+    teams: [[null, "", "rk num", (t) => t.n],
+      ["contest", "Tournament", "contest", (t) => `${esc(t.contest)}<div class="under sm">${money(t.buyIn)} · drafted ${day(t.date)} · ${t.rank == null ? "no place yet" : `${t.rank} of ${t.entrants}`}</div>`],
+      ["buyIn", "Buy-in", "num col-buyin", (t) => money(t.buyIn)], ["date", "Drafted", "col-date", (t) => day(t.date)],
+      ["rank", L("League place", "Place"), "col-place", place], ["gap", "Cut line", "", gapChip],
+      ["left", "Left", "num col-left", (t) => t.left ?? "—"], ["points", "Points", "num", (t) => `<b>${pts(t.points)}</b>`]],
+    exposure: [[null, "", "rk num", (r) => r.n], ["name", "Player", "user", (r) => `${posTag(r.pos)} ${logo(r.team)}<span class="pname">${esc(r.name)}</span>`],
+      ["teams", "Teams", "num", (r) => r.teams], ["own", L("Exposure", "Exp"), "num", (r) => pc1(r.own)], ["advancing", "Advancing", "num col-buyin", (r) => r.advancing],
+      ["advRate", L("Advance rate", "Adv %"), "num", (r) => pc1(r.advRate)], ["avgPick", "Avg pick", "num col-date", (r) => r.avgPick == null ? "—" : Number(r.avgPick).toFixed(1)]],
+  };
+  const ASC_FIRST = new Set(["name", "avgPick", "rank", "date", "contest"]);
+
+  const params = (extra) => { const q = { view: F.tab === "exposure" ? "players" : "teams", u: who, t: F.t, sort: F.sort, dir: F.dir, ...extra };
+    if (F.tab === "teams") { q.p = F.p; q.adv = F.adv; } else q.pos = F.pos;
+    return new URLSearchParams(Object.entries(q).filter(([, v]) => v !== "" && v != null)); };
+  const url = (offset, limit) => "/api/leaderboard?" + params({ offset, limit });
+  function pushState() {
+    const q = new URLSearchParams(Object.entries(F).filter(([k, v]) => v && !(k === "tab" && v === "teams"))).toString();
+    history.replaceState(null, "", "/u/" + encodeURIComponent(who) + (q ? "?" + q : ""));
+  }
+
+  function renderHeader(P) {
+    $("name").textContent = P.user; document.title = `${P.user} · dkbbdb`;
+    $("sub").textContent = `DraftKings best ball · ${plural(P.teams, "team")} · NFL week ${data.week}`;
+    const ranked = P.advancing + P.out, tiles = [
+      ["Teams", P.teams.toLocaleString(), `in ${plural(P.tournaments.length, "tournament")}`],
+      ["Buy-ins", money(P.buyIn), P.teams ? `${money(Math.round(P.buyIn / P.teams))} a team` : ""],
+      ["Advancing", P.advancing.toLocaleString(), ranked ? `${pct(P.advancing, ranked)} of ${plural(ranked, "team")} with a league place` : "no league places yet"],
+      ["Best team", P.best ? pts(P.best.points) : "—", P.best ? `${P.best.rank ?? "—"} of ${P.best.entrants ?? "—"} · ${P.best.contest}` : "", P.best?.id]];
+    $("tiles").innerHTML = tiles.map(([k, v, d, id]) => `<div class="tile${id ? " link" : ""}"${id ? ` data-id="${esc(id)}" tabindex="0" title="Open this team's league"` : ""}><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="d" title="${esc(d)}">${esc(d)}</div></div>`).join("");
+    const parts = [["adv", P.advancing, "advancing"], ["out", P.out, "out"], ["wait", P.unranked, "not started"]];
+    $("split").hidden = !P.teams;
+    for (const [cls, n] of parts) $("split").querySelector("." + cls).style.width = `${P.teams ? 100 * n / P.teams : 0}%`;
+    $("split").querySelector(".legend").innerHTML = parts.filter(([, n]) => n).map(([cls, n, w]) => `<span><i class="${cls}"></i><b>${n.toLocaleString()}</b> ${w}</span>`).join("");
+  }
+
+  function render() {
+    const cols = COLS[F.tab];
+    if (!data?.live) { $("rows").innerHTML = `<tr><td class="empty">Scores are unavailable right now — try again in a minute.</td></tr>`; return; }
+    const P = data.profile, f = data.filter, s = data.stats;
+    renderHeader(P);
+    if (!P.teams) { // nothing synced under this name
+      $("tiles").innerHTML = ""; $("sub").textContent = "";
+      $("panel").innerHTML = `<div class="empty">No teams under “${esc(P.user)}” on dkbbdb yet. If that is you, <a href="/connect">add your teams</a> — it takes about a minute.</div>`;
+      return;
+    }
+
+    const sel = $("fT");
+    sel.replaceChildren(new Option(`All tournaments (${P.teams.toLocaleString()})`, ""), ...P.tournaments.map((t) => new Option(`${t.name} (${t.teams.toLocaleString()})`, t.name)));
+    sel.value = F.t;
+    for (const b of $("tabs").children) b.classList.toggle("on", b.dataset.tab === F.tab);
+    for (const b of $("posPills").children) b.classList.toggle("on", b.dataset.pos === F.pos);
+    $("posPills").hidden = F.tab !== "exposure"; $("advWrap").hidden = F.tab !== "teams"; $("advOnly").checked = F.adv === "1";
+    $("fP").hidden = F.tab !== "teams";
+
+    // chosen players (Teams tab): chips + one line of numbers against the teams in view
+    const chips = [];
+    const np = F.tab === "teams" ? f.p.length : 0;
+    if (np) {
+      for (const p of f.p) chips.push(`<span class="tag">${posTag(p.pos)}${esc(p.name)} <i>${esc(p.team ?? "")}</i><button data-clear="p" data-id="${p.id}" aria-label="Remove ${esc(p.name)}">✕</button></span>`);
+      const them = np === 1 ? "him" : np === 2 ? "both" : `all ${np}`;
+      chips.push(`<span class="sub"><b>${s.count.toLocaleString()}</b> of ${plural(s.field, "team")}${f.t ? " in this tournament" : ""} have ${them} (${pct(s.count, s.field)}) · <b>${s.advancing.toLocaleString()}</b> advancing${s.ranked ? ` (${pct(s.advancing, s.ranked)}, all teams ${pct(s.fieldAdvancing, s.fieldRanked)})` : ""}${np < 5 ? " · add another player to narrow it down" : ""}</span>`);
+    }
+    $("active").innerHTML = chips.join(""); $("active").hidden = !chips.length;
+
+    $("count").textContent = F.tab === "teams" ? `${plural(data.total, "team")} · click one to see its league` : `${plural(data.total, "player")} · click one to see the teams that have him`;
+    const thClass = (cls) => cls.split(" ").filter((c) => c === "num" || c.startsWith("col-")).join(" ");
+    $("thead").innerHTML = cols.map(([key, label, cls]) => `<th class="${thClass(cls)}${key ? " sortable" : ""}"${key ? ` data-sort="${key}" tabindex="0"` : ""}>${label}${key && data.sort === key ? `<span class="arrow">${data.dir === "asc" ? "▲" : "▼"}</span>` : ""}</th>`).join("");
+    const attr = (r) => F.tab === "teams" ? `data-id="${esc(r.id)}"` : `data-player="${r.id}"`;
+    $("rows").innerHTML = rows.map((r) => `<tr ${attr(r)} tabindex="0">${cols.map(([, , cls, cell]) => `<td class="${cls}">${cell(r)}</td>`).join("")}</tr>`).join("")
+      || `<tr><td colspan="${cols.length}" class="empty">Nothing matches.</td></tr>`;
+    $("more").hidden = rows.length >= data.total;
+    renderNote();
+  }
+  function renderNote() {
+    if (!data?.at) return;
+    $("liveNote").innerHTML = `<span class="live"><span class="dot"></span>${data.playing ? "games on" : "live scoring"} · updated ${agoTxt(data.at)}</span>`;
+  }
+
+  let seq = 0;
+  async function load(keepShown = false) {
+    if (!keepShown) shown = PAGE;
+    const mine = ++seq;
+    try {
+      const d = await (await fetch(url(0, Math.min(200, shown)))).json();
+      const got = d.rows ?? [];
+      while (d.live && got.length < Math.min(shown, d.total)) got.push(...(await (await fetch(url(got.length, 200))).json()).rows);
+      if (mine !== seq) return;
+      data = d; rows = got; render();
+    } catch { if (!data) $("rows").innerHTML = `<tr><td class="empty">Could not load this page — check your connection.</td></tr>`; }
+  }
+  const set = (changes) => { Object.assign(F, changes); pushState(); load(); };
+  const pids = () => F.p.split(",").filter(Boolean);
+
+  window.dkbbSuggest($("find"), "user", (r) => { location.href = "/u/" + encodeURIComponent(r.username); });
+  $("fT").addEventListener("change", (e) => set({ t: e.target.value }));
+  $("advOnly").addEventListener("change", (e) => set({ adv: e.target.checked ? "1" : "" }));
+  $("tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b && b.dataset.tab !== F.tab) set({ tab: b.dataset.tab, sort: "", dir: "" }); });
+  $("posPills").addEventListener("click", (e) => { const b = e.target.closest("[data-pos]"); if (b) set({ pos: b.dataset.pos }); });
+  window.dkbbSuggest($("fP"), "player", (r) => set({ p: [...new Set([...pids(), String(r.id)])].slice(0, 5).join(",") }));
+  $("active").addEventListener("click", (e) => { const b = e.target.closest("[data-clear]"); if (b) set({ p: pids().filter((id) => id !== b.dataset.id).join(",") }); });
+  $("moreBtn").addEventListener("click", () => { shown += PAGE; load(true); });
+  const sortClick = (th) => { const k = th.dataset.sort; set({ sort: k, dir: data?.sort === k ? (data.dir === "asc" ? "desc" : "asc") : ASC_FIRST.has(k) ? "asc" : "desc" }); };
+  $("thead").addEventListener("click", (e) => { const th = e.target.closest("[data-sort]"); if (th) sortClick(th); });
+  $("thead").addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.matches("[data-sort]")) sortClick(e.target); });
+
+  // a team opens its league view — the pop-up from boot.js in a full-screen frame; ?team= keeps the link shareable
+  let frame = null;
+  function openTeam(id) {
+    closeTeam(false);
+    frame = document.createElement("iframe");
+    frame.className = "teamframe"; frame.title = "Team"; frame.src = "/team/" + encodeURIComponent(id);
+    document.body.appendChild(frame);
+    document.documentElement.style.overflow = "hidden";
+    F.team = String(id); pushState();
+  }
+  function closeTeam(update = true) { frame?.remove(); frame = null; document.documentElement.style.overflow = ""; if (update && F.team) { F.team = ""; pushState(); } }
+  window.addEventListener("message", (e) => { if (e.origin === location.origin && e.data?.dkbbdb === "close-team") closeTeam(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTeam(); });
+  function rowClick(target) {
+    const tr = target.closest("tr"); if (!tr) return;
+    if (tr.dataset.id) openTeam(tr.dataset.id);
+    else if (tr.dataset.player) set({ tab: "teams", p: tr.dataset.player, adv: "", sort: "", dir: "" }); // "Advancing only" is hidden on Exposure, so it is dropped
+  }
+  $("rows").addEventListener("click", (e) => { if (!e.target.closest("a")) rowClick(e.target); });
+  $("rows").addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.matches("tr")) rowClick(e.target); });
+  $("tiles").addEventListener("click", (e) => { const t = e.target.closest("[data-id]"); if (t) openTeam(t.dataset.id); });
+  $("tiles").addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.matches("[data-id]")) openTeam(e.target.dataset.id); });
+
+  load().then(() => { if (F.team) openTeam(F.team); });
+  setInterval(() => { if (document.visibilityState === "visible" && !frame) load(true); }, 60e3);
+  setInterval(renderNote, 15e3);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && !frame) load(true); });
+})();
+</script>
+</body>
+</html>

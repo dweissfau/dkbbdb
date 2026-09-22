@@ -1,4 +1,4 @@
-// Boot the front page in jsdom against the LIVE api and click through it: tabs, sorting, filters, row clicks.
+// Boot the field leaderboard page (/leaderboard, kept but unlinked) in jsdom against the LIVE api and click through it: tabs, sorting, filters, row clicks.
 //   node scripts/smoke-front.mjs [site]
 import fs from "node:fs";
 import path from "node:path";
@@ -7,9 +7,9 @@ import { ROOT } from "./db.mjs";
 const { JSDOM } = createRequire(path.join(ROOT, "..", "package.json"))("jsdom");
 const site = process.argv[2] ?? "https://dkbbdb.com";
 const errors = [];
-let html = fs.readFileSync(path.join(ROOT, "public", "index.html"), "utf8").replace('<script src="/site.js"></script>', `<script>${fs.readFileSync(path.join(ROOT, "public", "site.js"), "utf8")}</script>`);
-const dom = new JSDOM(html, { runScripts: "dangerously", url: site + "/", pretendToBeVisual: true, beforeParse(w) {
-  w.fetch = (u, init) => fetch(new URL(u, site), init); w.scrollTo = () => {};
+let html = fs.readFileSync(path.join(ROOT, "public", "leaderboard.html"), "utf8").replace('<script src="/site.js"></script>', `<script>${fs.readFileSync(path.join(ROOT, "public", "site.js"), "utf8")}</script>`);
+const dom = new JSDOM(html, { runScripts: "dangerously", url: site + "/leaderboard", pretendToBeVisual: true, beforeParse(w) {
+  w.fetch = (u, init) => fetch(new URL(u, site), { ...init, headers: { ...init?.headers, ...(process.env.VERCEL_OIDC_TOKEN ? { "x-vercel-trusted-oidc-idp-token": process.env.VERCEL_OIDC_TOKEN } : {}) } }); w.scrollTo = () => {};
   w.addEventListener("error", (e) => errors.push(e.message));
 } });
 const w = dom.window, d = w.document, wait = (ms = 2500) => new Promise((r) => setTimeout(r, ms));
@@ -20,6 +20,7 @@ const click = (el) => el.dispatchEvent(new w.MouseEvent("click", { bubbles: true
 await wait(6000);
 ok("teams tab renders 100 rows", rows().length === 100, `${rows().length} rows · ${heads().join(" | ")}`);
 ok("first-visit strip is shown", !d.getElementById("hello").hidden);
+ok("the page keeps its own address", w.location.pathname === "/leaderboard", w.location.href);
 ok("cut-line chip on the top row", /Advancing|Out by/.test(rows()[0]?.textContent ?? ""), rows()[0]?.textContent.replace(/\s+/g, " ").slice(0, 110));
 click(d.querySelector('th[data-sort="gap"]')); await wait();
 ok("sort by cut line", /▼/.test(d.querySelector('th[data-sort="gap"]').textContent) && w.location.search.includes("sort=gap"), w.location.search);

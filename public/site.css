@@ -148,3 +148,56 @@ td.user .pos { margin-right: 4px; }
 
 /* team logo left of a player's name (same as the team pop-up) */
 .tlogo { display: inline-block; width: 18px; height: 18px; vertical-align: middle; margin-right: 5px; object-fit: contain; }
+
+/* home page: one search box, one button */
+.home { max-width: 600px; margin: 0 auto; padding: 64px 24px 40px; text-align: center; }
+.home h1 { font-size: 30px; letter-spacing: -.5px; margin: 0 0 10px; line-height: 1.2; }
+.home > p { color: var(--ink-2); font-size: 16px; margin: 0 0 24px; }
+.home .find { flex: none; max-width: none; margin: 0 auto 26px; text-align: left; }
+.home .find input { padding: 13px 16px; font-size: 18px; border-radius: 10px; }
+.home .or { color: var(--muted); font-size: 13.5px; margin: 0 0 10px; }
+.btn.big { padding: 11px 20px; font-size: 15px; border-radius: 10px; }
+.home .hint { color: var(--muted); font-size: 13px; margin: 10px 0 0; }
+.home footer { margin-top: 64px; }
+@media (max-width: 640px) { .home { padding: 36px 16px 32px; } .home h1 { font-size: 25px; } .home > p { font-size: 15px; } }
+
+/* profile page (/u/<name>): header, four tiles, advancing split, then the tables */
+.profile .who { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 6px 0 16px; }
+.profile h1 { font-size: 30px; margin: 0; letter-spacing: -.5px; line-height: 1.15; overflow-wrap: anywhere; }
+.profile .who .sub { color: var(--muted); font-size: 13.5px; margin-top: 3px; }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+.tile .k { color: var(--muted); font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.tile .v { font-size: 25px; font-weight: 700; line-height: 1.3; font-variant-numeric: tabular-nums; }
+.tile .d { color: var(--ink-2); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile.link { cursor: pointer; }
+.tile.link:hover, .tile.link:focus-visible { border-color: var(--accent); outline: none; }
+.split { margin: 0 2px 16px; }
+.split .track { display: flex; height: 8px; border-radius: 999px; overflow: hidden; background: var(--grid); }
+.split .track i { display: block; height: 100%; transition: width .3s; }
+.split .adv { background: var(--chip-good); } .split .out { background: #d95926; } .split .wait { background: var(--line); }
+.split .legend { display: flex; gap: 16px; flex-wrap: wrap; color: var(--muted); font-size: 12.5px; margin-top: 7px; }
+.split .legend b { color: var(--ink-2); font-weight: 600; }
+.split .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+.profile .head { align-items: center; }
+.profile .head select { padding: 5px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--page); color: var(--ink); font: inherit; font-size: 13px; max-width: 300px; min-width: 0; }
+.profile .head .find { flex: 0 1 230px; }
+.profile .head .find input { padding: 5px 10px; font-size: 13px; background: var(--page); }
+.profile .active .sub b { color: var(--ink); }
+.profile .empty a { color: var(--accent); }
+.of { color: var(--muted); }
+.dim { color: var(--muted); font-size: 12.5px; }
+@media (max-width: 640px) {
+  .profile .who { margin: 2px 0 12px; }
+  .profile h1 { font-size: 24px; }
+  .tiles { grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+  .tile { padding: 9px 10px; }
+  .tile .v { font-size: 20px; }
+  .tile .d { font-size: 12px; }
+  .split { margin-bottom: 12px; }
+  .profile .head select, .profile .head .find { flex: 1 1 100%; max-width: none; }
+  .profile .head .find input { font-size: 16px; padding: 7px 10px; }
+  .profile .head select { font-size: 16px; padding: 7px 10px; }
+  .profile td.contest { white-space: normal; color: var(--ink); font-weight: 600; font-size: 13.5px; }
+  .profile .head .note { flex-basis: 100%; }
+}

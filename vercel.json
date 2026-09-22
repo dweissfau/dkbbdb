@@ -30,6 +30,10 @@
     {
       "source": "/team/:id",
       "destination": "/app"
+    },
+    {
+      "source": "/u/:name",
+      "destination": "/u"
     }
   ],
   "redirects": [
@@ -45,8 +49,15 @@
       "permanent": true
     },
     {
-      "source": "/u/:name",
-      "destination": "/?u=:name",
+      "source": "/",
+      "has": [
+        {
+          "type": "query",
+          "key": "u",
+          "value": "(?<name>.+)"
+        }
+      ],
+      "destination": "/u/:name",
       "permanent": false
     }
   ]

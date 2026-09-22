@@ -1,9 +1,9 @@
-// Data loading for app.html, which on dkbbdb exists for ONE purpose: the leaderboard's team pop-up.
-//   /team/<entry id>   one team's league view (standings, rosters, week by week). The front page opens this in a
-//                      full-screen frame when a row is clicked, so the pop-up is the same league view the template
-//                      was built with. Closing it tells the parent page to remove the frame.
-// There are no whole-portfolio pages here (the owner keeps those, and his partners' pages, on his own site): any
-// other address goes back to the leaderboard.
+// Data loading for app.html, which on dkbbdb exists for ONE purpose: the team pop-up.
+//   /team/<entry id>   one team's league view (standings, rosters, week by week). A profile page (/u/<name>) opens
+//                      this in a full-screen frame when a row is clicked, so the pop-up is the same league view the
+//                      template was built with. Closing it tells the parent page to remove the frame.
+// There are no whole-portfolio dashboards here (the owner keeps those, and his partners' pages, on his own site):
+// any other address goes back to the home page.
 // Loads /api/portfolio?entry= into window.__DK, then runs /app.js (generated from the single-user dashboard
 // template by scripts/build-app.mjs).
 (() => {
@@ -13,11 +13,16 @@
   if (!team) { location.replace("/"); return; }
   const query = "entry=" + encodeURIComponent(team);
   const framed = window.parent !== window;
-  // a team link opened directly (shared, bookmarked): show it where it belongs — over the leaderboard
-  if (!framed) { location.replace("/?team=" + encodeURIComponent(team)); return; }
+  // a team link opened directly (shared, bookmarked): show it where it belongs — over its owner's page
+  if (!framed) {
+    fetch("/api/portfolio?" + query).then((r) => (r.ok ? r.json() : null))
+      .then((d) => { const name = d?.me?.accounts?.[0]; location.replace(name ? `/u/${encodeURIComponent(name)}?team=${encodeURIComponent(team)}` : "/"); })
+      .catch(() => location.replace("/"));
+    return;
+  }
   const closeFrame = () => { if (framed) window.parent.postMessage({ dkbbdb: "close-team" }, location.origin); else location.href = "/"; };
 
-  // only the pop-up is visible; behind it is the dimmed leaderboard of the parent page
+  // only the pop-up is visible; behind it is the dimmed parent page
   const css = document.createElement("style");
   css.textContent = "html, body { background: transparent !important; } body > *:not(#modal):not(#tooltip):not(.veil) { display: none !important; } #modal { background: rgba(0,0,0,.6); }";
   document.head.appendChild(css);
