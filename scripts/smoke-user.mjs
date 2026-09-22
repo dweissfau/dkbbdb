@@ -21,7 +21,7 @@ const click = (el) => el.dispatchEvent(new w.MouseEvent("click", { bubbles: true
 await wait(6000);
 ok("header names the account and the week", text(d.getElementById("name")).toLowerCase() === name.toLowerCase() && /NFL week \d+/.test(text(d.getElementById("sub"))), text(d.getElementById("sub")));
 const tiles = [...d.querySelectorAll(".tile")];
-ok("four tiles: teams, buy-ins, advancing, best team", tiles.length === 4 && tiles.map((t) => text(t.querySelector(".k"))).join("|") === "Teams|Buy-ins|Advancing|Best team", tiles.map((t) => text(t)).join(" · "));
+ok("four tiles: teams, buy-ins, advancing, best team", tiles.length === 4 && tiles.map((t) => text(t.querySelector(".k"))).join("|") === "Teams|Entry fees|Advancing|Best team", tiles.map((t) => text(t)).join(" · "));
 ok("advancing split bar with a legend", !d.getElementById("split").hidden && /advancing/.test(text(d.querySelector(".split .legend"))), text(d.querySelector(".split .legend")));
 ok("teams table: no username column, tournament first", rows().length === 100 && heads()[1] === "Tournament" && !heads().includes("User"), heads().join(" | "));
 ok("tournament dropdown lists this account's tournaments with counts", d.getElementById("fT").options.length > 1 && /\(\d+\)/.test(d.getElementById("fT").options[1].text), d.getElementById("fT").options[1].text);
@@ -32,7 +32,7 @@ d.getElementById("fT").value = d.getElementById("fT").options[1].value; d.getEle
 ok("tournament filter", rows().length > 0 && rows().every((r) => text(r).includes(d.getElementById("fT").options[1].text.replace(/ \(\d+\)$/, ""))) && tiles.length === 4 && text(d.querySelector(".tile .v")) === text(d.querySelector("#tiles .tile .v")), `${rows().length} rows · ${text(d.getElementById("count"))}`);
 d.getElementById("fT").value = ""; d.getElementById("fT").dispatchEvent(new w.Event("change", { bubbles: true })); await wait();
 click(d.querySelector('[data-tab="exposure"]')); await wait();
-ok("exposure tab", rows().length === 100 && heads().some((h) => /Exposure/.test(h)) && heads().some((h) => /Buy-ins/.test(h)) && !heads().includes("Teams") && /^\$[\d,]+$/.test(text(rows()[0].querySelectorAll("td")[2])) && !d.getElementById("posPills").hidden && d.getElementById("fP").hidden && d.getElementById("advWrap").hidden, heads().join(" | "));
+ok("exposure tab", rows().length === 100 && heads().some((h) => /Exposure/.test(h)) && heads().some((h) => /Entry fees/.test(h)) && !heads().includes("Teams") && /^\$[\d,]+$/.test(text(rows()[0].querySelectorAll("td")[2])) && !d.getElementById("posPills").hidden && d.getElementById("fP").hidden && d.getElementById("advWrap").hidden, heads().join(" | "));
 click(d.querySelector('[data-pos="RB"]')); await wait();
 ok("position pill", rows().every((r) => r.querySelector(".pos")?.textContent === "RB"), `${rows().length} RBs, top ${text(rows()[0]?.querySelector(".pname"))}`);
 const pname = text(rows()[0].querySelector(".pname")); click(rows()[0]); await wait();
