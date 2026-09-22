@@ -231,8 +231,8 @@ td.user .pos { margin-right: 4px; }
   .tile .v { font-size: 22px; }
   .tile .of { font-size: 14px; font-weight: 500; }
   .tile .good { color: #35c596; }
-  .split { margin: 0 0 14px; }
-  .split .legend { display: none; }
+  .split { display: none; }
+  .tiles { margin-bottom: 12px; }
 
   /* panel head: full-width segmented tabs + the funnel button; the count line goes */
   .profile .panel { padding: 10px 12px 4px; }
