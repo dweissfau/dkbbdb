@@ -293,3 +293,8 @@ td.user .pos { margin-right: 4px; }
 .hits button .hit { flex: 1 1 auto; }
 .hits button .hit .pname { min-width: 0; }
 .hits button > span:last-child { flex: none; }
+
+/* home page: the box for a device that has not synced */
+.goform { display: flex; gap: 8px; margin-top: 10px; }
+.goform input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--page); color: var(--ink); font: inherit; font-size: 16px; }
+.goform input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }

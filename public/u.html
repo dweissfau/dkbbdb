@@ -62,7 +62,7 @@
     </div>
     <div class="more" id="more" hidden><button class="btn" id="moreBtn">Show more</button></div>
   </div>
-  <footer>Independent tool — not affiliated with, endorsed by, or sponsored by DraftKings. DraftKings is a trademark of its owner. · <a href="/privacy">Privacy</a></footer>
+  <footer>Independent tool — not affiliated with, endorsed by, or sponsored by DraftKings. DraftKings is a trademark of its owner. · <a href="/privacy">Privacy</a><span id="forget" hidden> · dkbbdb.com opens this page in this browser · <a href="/#add" id="forgetLink">forget that</a></span></footer>
 </main>
 <script src="/site.js"></script>
 <script>
@@ -90,6 +90,8 @@
   $("name").textContent = who; document.title = `${who} · dkbbdb`;
   // arriving from the extension (/?u=<name> → here with ?u=): this is the visitor's own account — the home page links back to it
   if ((new URLSearchParams(location.search).get("u") ?? "").trim().toLowerCase() === who.toLowerCase()) { try { localStorage.setItem("dkbbdb-me", who); } catch { /* private window */ } }
+  const remember = (name) => { try { localStorage.setItem("dkbbdb-me", name); } catch { /* private window */ } };
+  const isMe = () => { try { return (localStorage.getItem("dkbbdb-me") ?? "").toLowerCase() === who.toLowerCase(); } catch { return false; } };
 
   // the view lives in the address: /u/<name>?tab=exposure &t=tournament &p=playerId[,id…] &adv=1 &pos=QB &sort=&dir= &team=entryId
   const sp = new URLSearchParams(location.search);
@@ -151,6 +153,7 @@
     if (!data?.live) { $("rows").innerHTML = `<tr><td class="empty">Scores are unavailable right now — try again in a minute.</td></tr>`; return; }
     const P = data.profile, f = data.filter, s = data.stats;
     renderHeader(P);
+    if (P.teams && (sp.get("me") === "1" || isMe())) { remember(P.user); $("forget").hidden = false; } // typed on the home page, or already this browser's own page
     if (!P.teams) { // nothing synced under this name
       $("tiles").innerHTML = ""; $("sub").textContent = "";
       $("panel").innerHTML = `<div class="empty">No teams under “${esc(P.user)}” on dkbbdb yet. If that is you, <a href="/">add your teams</a> — it takes about a minute.</div>`;
@@ -233,6 +236,7 @@
   $("toolsVeil").addEventListener("click", () => sheet(false));
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") sheet(false); });
   if (location.hash === "#filters") sheet(true);
+  $("forgetLink").addEventListener("click", () => { try { localStorage.removeItem("dkbbdb-me"); } catch { /* private window */ } });
   $("moreBtn").addEventListener("click", () => { shown += PAGE; load(true); });
   const sortClick = (th) => { const k = th.dataset.sort; set({ sort: k, dir: data?.sort === k ? (data.dir === "asc" ? "desc" : "asc") : ASC_FIRST.has(k) ? "asc" : "desc" }); };
   $("thead").addEventListener("click", (e) => { const th = e.target.closest("[data-sort]"); if (th) sortClick(th); });

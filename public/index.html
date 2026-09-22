@@ -14,10 +14,14 @@
 <link rel="icon" href="/favicon.png">
 <link rel="stylesheet" href="/site.css">
 <script>
-// the extension's "See <name>" link (/?u=<name>) and older shared team links go to the pages that replaced them
+// A browser that has been to its own page (via the extension's link, or the box below) goes straight there: the
+// directions are for a browser that has never seen one. /#add shows them anyway. The extension's "See <name>" link
+// (/?u=<name>) and older shared team links go to the pages that replaced them.
 (() => { const sp = new URLSearchParams(location.search), u = sp.get("u"), team = sp.get("team");
-  if (u) location.replace("/u/" + encodeURIComponent(u.split(",")[0].trim()) + "?u=" + encodeURIComponent(u.split(",")[0].trim()));
-  else if (team) location.replace("/team/" + encodeURIComponent(team)); })();
+  if (u) return location.replace("/u/" + encodeURIComponent(u.split(",")[0].trim()) + "?u=" + encodeURIComponent(u.split(",")[0].trim()));
+  if (team) return location.replace("/team/" + encodeURIComponent(team));
+  if (location.hash === "#add") return;
+  try { const me = localStorage.getItem("dkbbdb-me"); if (me) location.replace("/u/" + encodeURIComponent(me)); } catch { /* private window */ } })();
 </script>
 </head>
 <body>
@@ -25,8 +29,6 @@
   <a class="brand" href="/">dkbbdb</a>
 </div>
 <main class="narrow">
-  <a class="mine" id="mine" hidden><span><b id="mineName"></b><br><span class="muted">your page</span></span><span class="go">Open →</span></a>
-
   <h1 class="h">Add your DraftKings best ball teams</h1>
   <p class="lead">Two steps, about a minute, no sign-up. You need a computer with Chrome for this part; after that, any phone works.</p>
 
@@ -44,6 +46,12 @@
   </div>
 
   <div class="step">
+    <h2>Already synced on another device?</h2>
+    <p>Your page works on any phone or computer. Type your DraftKings username and this browser will remember it.</p>
+    <form class="goform" id="go" autocomplete="off"><input type="text" placeholder="DraftKings username" aria-label="Your DraftKings username" spellcheck="false" autocapitalize="off" required><button class="btn primary" type="submit">Open my page</button></form>
+  </div>
+
+  <div class="step">
     <h2>What you get</h2>
     <p>One page for your account: every season-long team's league place, cut line and points, and your exposure to every player — scored live from public NFL stats. There is no search on the site; your page is at <span class="mono">dkbbdb.com/u/your-username</span> and anyone you give that link to can see it.</p>
   </div>
@@ -51,8 +59,8 @@
   <footer>Independent tool — not affiliated with, endorsed by, or sponsored by DraftKings. DraftKings is a trademark of its owner. · <a href="/privacy">Privacy</a></footer>
 </main>
 <script>
-// a visitor who has arrived at their own page from the extension gets a shortcut back to it
-try { const me = localStorage.getItem("dkbbdb-me"); if (me) { const a = document.getElementById("mine"); a.href = "/u/" + encodeURIComponent(me); document.getElementById("mineName").textContent = me; a.hidden = false; } } catch { /* private window */ }
+// the box for another device: straight to that page (no look-up); the page marks itself as this browser's own if it has teams
+document.getElementById("go").addEventListener("submit", (e) => { e.preventDefault(); const n = e.target.querySelector("input").value.trim(); if (n) location.href = "/u/" + encodeURIComponent(n) + "?me=1"; });
 </script>
 </body>
 </html>
