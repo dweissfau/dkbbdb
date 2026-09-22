@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign-ups · dkbbdb</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.png">
+<link rel="stylesheet" href="/site.css">
+<style>
+  .kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .admin h2 { font-size: 15px; margin: 22px 0 8px; }
+  .admin td, .admin th { padding: 7px 8px; font-size: 13px; }
+  .admin td.wrap { white-space: normal; color: var(--ink-2); }
+  .admin tbody tr { cursor: default; }
+  .admin tbody tr:hover { background: none; }
+  .admin .bad { color: var(--bad); font-weight: 600; }
+  .keyform { display: flex; gap: 8px; max-width: 480px; }
+  .keyform input { flex: 1; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; }
+  .u a { color: var(--ink); font-weight: 600; text-decoration: none; }
+  .u a:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="bar">
+  <span class="brand">dkbbdb</span>
+  <span class="note" style="color:var(--muted)">sign-ups</span>
+  <div class="spacer"></div>
+  <button class="btn" id="signout" hidden>Sign out</button>
+</div>
+<main class="admin">
+  <form class="keyform" id="keyform"><input type="password" placeholder="Admin key" aria-label="Admin key" autocomplete="current-password"><button class="btn primary" type="submit">Open</button></form>
+  <div id="view" hidden>
+    <div class="kv" id="totals"></div>
+    <h2>Accounts <span class="note" id="accNote" style="color:var(--muted);font-weight:400"></span></h2>
+    <div class="scroll-x"><table><thead><tr><th>Username</th><th>Signed up</th><th>Last sync</th><th class="num">Teams</th><th class="num">Entry fees</th><th class="num">Tournaments</th><th class="num">Uploads</th><th class="num">Rejected</th><th>Ext</th></tr></thead><tbody id="accounts"></tbody></table></div>
+    <h2>Teams by tournament</h2>
+    <div class="scroll-x"><table><thead><tr><th>Tournament</th><th class="num">Teams</th><th class="num">Accounts</th></tr></thead><tbody id="contests"></tbody></table></div>
+    <h2>Recent uploads</h2>
+    <div class="scroll-x"><table><thead><tr><th>When</th><th>Accounts</th><th class="num">Drafts</th><th class="num">Refreshed</th><th class="num">Skipped</th><th class="num">Rejected</th><th>Ext</th><th>Note</th></tr></thead><tbody id="uploads"></tbody></table></div>
+    <p class="note" id="at" style="color:var(--muted)"></p>
+  </div>
+</main>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const money = (n) => "$" + Math.round(Number(n ?? 0)).toLocaleString();
+  const when = (iso) => iso ? new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—";
+  const ago = (iso) => { if (!iso) return "—"; const m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`; };
+  const getKey = () => { try { return localStorage.getItem("dkbbdb-admin") ?? ""; } catch { return ""; } };
+  const setKey = (k) => { try { k ? localStorage.setItem("dkbbdb-admin", k) : localStorage.removeItem("dkbbdb-admin"); } catch { /* private window */ } };
+
+  async function load(key) {
+    const r = await fetch("/api/admin", { headers: { "x-admin-key": key } });
+    if (r.status === 401) { setKey(""); $("keyform").hidden = false; $("view").hidden = true; $("signout").hidden = true; $("keyform").querySelector("input").placeholder = "Wrong key — try again"; return; }
+    const d = await r.json();
+    setKey(key); $("keyform").hidden = true; $("view").hidden = false; $("signout").hidden = false;
+    const t = d.totals;
+    $("totals").innerHTML = [["Accounts", t.accounts, `${t.today} today · ${t.week} this week`], ["Teams", t.teams.toLocaleString(), ""], ["Entry fees", money(t.fees), "across every synced team"]]
+      .map(([k, v, s]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${s}</div></div>`).join("");
+    $("accNote").textContent = "newest first · click a name to open the page";
+    $("accounts").innerHTML = d.accounts.map((a) => `<tr><td class="u"><a href="/u/${encodeURIComponent(a.username)}" target="_blank" rel="noopener">${esc(a.username)}</a></td><td title="${esc(a.created_at)}">${when(a.created_at)}</td><td title="${esc(a.synced_at)}">${ago(a.synced_at)}</td><td class="num">${a.teams}</td><td class="num">${money(a.fees)}</td><td class="num">${a.tournaments}</td><td class="num">${a.uploads}</td><td class="num${a.rejected ? " bad" : ""}">${a.rejected}</td><td>${esc(a.ext ?? "—")}</td></tr>`).join("")
+      || `<tr><td colspan="9" class="empty">Nobody yet.</td></tr>`;
+    $("contests").innerHTML = d.byContest.map((c) => `<tr><td class="wrap">${esc(c.name)}</td><td class="num">${c.teams}</td><td class="num">${c.accounts}</td></tr>`).join("");
+    $("uploads").innerHTML = d.uploads.map((u) => `<tr><td title="${esc(u.at)}">${when(u.at)}</td><td>${esc(u.usernames.join(", ")) || "—"}</td><td class="num">${u.drafts}</td><td class="num">${u.refreshed}</td><td class="num">${u.skipped}</td><td class="num${u.rejected ? " bad" : ""}">${u.rejected}</td><td>${esc(u.ext ?? "—")}</td><td class="wrap">${esc(u.note ?? "")}</td></tr>`).join("")
+      || `<tr><td colspan="8" class="empty">No uploads yet.</td></tr>`;
+    $("at").textContent = `as of ${when(d.at)} · refreshes every minute while open`;
+  }
+  $("keyform").addEventListener("submit", (e) => { e.preventDefault(); const k = e.target.querySelector("input").value.trim(); if (k) load(k); });
+  $("signout").addEventListener("click", () => { setKey(""); location.reload(); });
+  const k = getKey();
+  if (k) load(k); else $("keyform").hidden = false;
+  setInterval(() => { const k = getKey(); if (k && document.visibilityState === "visible") load(k); }, 60e3);
+})();
+</script>
+</body>
+</html>
