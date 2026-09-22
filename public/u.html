@@ -157,7 +157,7 @@
     const chips = [];
     const np = F.tab === "teams" ? f.p.length : 0;
     if (np) {
-      for (const p of f.p) chips.push(`<span class="tag">${posTag(p.pos)}${esc(p.name)} <i>${esc(p.team ?? "")}</i><button data-clear="p" data-id="${p.id}" aria-label="Remove ${esc(p.name)}">✕</button></span>`);
+      for (const p of f.p) chips.push(`<span class="tag">${posTag(p.pos)}${logo(p.team)}${esc(p.name)}<button data-clear="p" data-id="${p.id}" aria-label="Remove ${esc(p.name)}">✕</button></span>`);
       const them = np === 1 ? "him" : np === 2 ? "both" : `all ${np}`;
       chips.push(`<span class="sub"><b>${s.count.toLocaleString()}</b> of ${plural(s.field, "team")}${f.t ? " in this tournament" : ""} have ${them} (${pct(s.count, s.field)}) · <b>${s.advancing.toLocaleString()}</b> advancing${s.ranked ? ` (${pct(s.advancing, s.ranked)}, all teams ${pct(s.fieldAdvancing, s.fieldRanked)})` : ""}${np < 5 ? " · add another player to narrow it down" : ""}</span>`);
     }

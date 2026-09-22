@@ -209,3 +209,7 @@ td.user .pos { margin-right: 4px; }
 .mine .go { color: var(--accent); font-weight: 600; white-space: nowrap; }
 .mine:hover { background: #222220; }
 .mono { font-family: ui-monospace, Consolas, monospace; font-size: 13px; color: var(--ink); }
+
+/* chosen-player chip: position, team logo, name */
+.tag .pos { margin-right: 2px; }
+.tag .tlogo { margin-right: 4px; }
