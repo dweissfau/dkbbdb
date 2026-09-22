@@ -213,3 +213,69 @@ td.user .pos { margin-right: 4px; }
 /* chosen-player chip: position, team logo, name */
 .tag .pos { margin-right: 2px; }
 .tag .tlogo { margin-right: 4px; }
+
+/* profile page: the filter tools. Desktop = inline in the panel head; phone (below) = a sheet under the funnel button */
+.tools { display: contents; }
+.tools .sheethead, .tools .sortwrap, #filterBtn, #toolsVeil { display: none; }
+.chip.wait { background: var(--grid); color: var(--muted); }
+#filterBtn { position: relative; padding: 6px 9px; line-height: 0; }
+#filterBtn.on::after { content: ""; position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+
+@media (max-width: 640px) {
+  /* header: name, "193 teams · NFL week 3", a green Live; two tiles, no sub-lines; the bar without a legend */
+  .profile .who { align-items: center; margin: 2px 0 12px; }
+  .profile .who .sub { font-size: 13px; }
+  .tiles { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .tile.t-teams, .tile.t-best, .tile .d { display: none; }
+  .tile.t-adv { order: 1; } .tile.t-fees { order: 2; }
+  .tile .v { font-size: 22px; }
+  .tile .of { font-size: 14px; font-weight: 500; }
+  .tile .good { color: #35c596; }
+  .split { margin: 0 0 14px; }
+  .split .legend { display: none; }
+
+  /* panel head: full-width segmented tabs + the funnel button; the count line goes */
+  .profile .panel { padding: 10px 12px 4px; }
+  .profile .head { flex-wrap: nowrap; gap: 8px; margin-bottom: 8px; }
+  .profile #tabs { flex: 1; gap: 0; background: var(--page); border: 1px solid var(--line); border-radius: 9px; padding: 3px; }
+  .profile #tabs .pill { flex: 1; border: 0; border-radius: 7px; padding: 7px 0; font-size: 14px; }
+  .profile #tabs .pill:not(.on) { color: var(--muted); }
+  .profile .head .spacer, .profile .head .note { display: none; }
+  #filterBtn { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 40px; padding: 0; border-radius: 9px; flex: none; }
+  .tag.sm { display: inline-flex; }
+  .profile .active { gap: 6px; margin-bottom: 8px; }
+  .profile .active .sub { flex-basis: 100%; font-size: 12.5px; color: var(--muted); }
+
+  /* the sheet */
+  #toolsVeil { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.55); }
+  #toolsVeil[hidden] { display: none !important; }
+  #toolsVeil:not([hidden]) { display: block; }
+  .tools { display: flex; flex-direction: column; gap: 12px; position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: var(--surface); border-top: 1px solid var(--line); border-radius: 16px 16px 0 0; padding: 14px 16px calc(18px + env(safe-area-inset-bottom)); transform: translateY(105%); transition: transform .22s ease-out; }
+  body.tools-open .tools { transform: none; }
+  .tools .sheethead { display: flex; align-items: center; justify-content: space-between; font-size: 16px; }
+  .tools .sortwrap { display: flex; align-items: center; gap: 10px; color: var(--ink-2); font-size: 14px; }
+  .tools .sortwrap select { flex: 1; }
+  .tools select, .tools .find input { width: 100%; padding: 10px 12px; font-size: 16px; border-radius: 9px; }
+  .tools .find, .tools select { flex: none; max-width: none; }
+  .tools .hits { top: auto; bottom: calc(100% + 4px); }
+  .tools .check { font-size: 15px; }
+  .tools .check input { width: 18px; height: 18px; }
+  .tools .pills { flex-wrap: wrap; }
+  .tools .pill.mini { padding: 6px 14px; font-size: 14px; }
+
+  /* rows: two lines, no header, no rank. Tournament / name on the left with details under it; the big number on
+     the right with the cut-line chip under it. Same grid for the Exposure tab. */
+  .profile thead { display: none; }
+  .profile tbody tr { display: grid; grid-template-columns: 1fr auto; column-gap: 12px; align-items: start; padding: 11px 0; border-bottom: 1px solid var(--grid); }
+  .profile tbody td { display: block; padding: 0; border: 0; }
+  .profile td.rk, .profile td.col-buyin, .profile td.col-date, .profile td.col-place, .profile td.col-left, .profile td.col-own { display: none; }
+  .profile td.contest, .profile td.user { grid-column: 1; grid-row: 1 / span 2; white-space: normal; color: var(--ink); font-weight: 500; font-size: 15px; line-height: 1.3; }
+  .profile td.contest .under, .profile td.user .under { font-size: 12.5px; margin-top: 3px; }
+  .profile td.contest .under b { color: var(--ink); }
+  .profile td.points { grid-column: 2; grid-row: 1; font-size: 16px; text-align: right; }
+  .profile td.gap { grid-column: 2; grid-row: 2; text-align: right; }
+  .profile .chip { background: none; padding: 0; font-size: 12.5px; font-weight: 600; }
+  .profile .chip.wait { color: var(--muted); }
+  .profile td.empty { grid-column: 1 / -1; display: block; }
+  .profile .more { padding-bottom: 8px; }
+}

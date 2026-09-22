@@ -36,15 +36,22 @@
         <button class="pill on" data-tab="teams" role="tab">Teams</button>
         <button class="pill" data-tab="exposure" role="tab">Exposure</button>
       </div>
-      <select id="fT" aria-label="Tournament"><option value="">All tournaments</option></select>
-      <form class="find" id="fP" autocomplete="off">
-        <input type="search" placeholder="Teams with a player…" aria-label="Player" spellcheck="false">
-        <div class="hits" hidden></div>
-      </form>
-      <div class="pills" id="posPills" hidden>
-        <button class="pill mini on" data-pos="">All</button><button class="pill mini" data-pos="QB">QB</button><button class="pill mini" data-pos="RB">RB</button><button class="pill mini" data-pos="WR">WR</button><button class="pill mini" data-pos="TE">TE</button>
+      <button class="btn" id="filterBtn" aria-label="Filters and sort" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg></button>
+      <!-- on desktop these sit inline in the head; on a phone they are a sheet opened by the funnel button -->
+      <div class="veil" id="toolsVeil" hidden></div>
+      <div class="tools" id="tools">
+        <div class="sheethead"><b>Filters</b><button class="btn" id="toolsDone" type="button">Done</button></div>
+        <select id="fT" aria-label="Tournament"><option value="">All tournaments</option></select>
+        <form class="find" id="fP" autocomplete="off">
+          <input type="search" placeholder="Teams with a player…" aria-label="Player" spellcheck="false">
+          <div class="hits" hidden></div>
+        </form>
+        <div class="pills" id="posPills" hidden>
+          <button class="pill mini on" data-pos="">All</button><button class="pill mini" data-pos="QB">QB</button><button class="pill mini" data-pos="RB">RB</button><button class="pill mini" data-pos="WR">WR</button><button class="pill mini" data-pos="TE">TE</button>
+        </div>
+        <label class="check" id="advWrap"><input type="checkbox" id="advOnly"> Advancing only</label>
+        <label class="sortwrap" id="sortWrap">Sort by <select id="fS" aria-label="Sort by"></select></label>
       </div>
-      <label class="check" id="advWrap"><input type="checkbox" id="advOnly"> Advancing only</label>
       <div class="spacer"></div>
       <span class="note" id="count"></span>
     </div>
@@ -92,23 +99,29 @@
     pos: sp.get("pos") ?? "", sort: sp.get("sort") ?? "", dir: sp.get("dir") ?? "", team: sp.get("team") ?? "" };
   let data = null, rows = [], shown = PAGE;
 
-  const gapChip = (t) => t.gap == null ? (t.adv ? `<span class="chip">Advancing</span>` : t.adv === false ? `<span class="chip out">Out</span>` : `<span class="dim">not started</span>`)
-    : t.adv ? `<span class="chip" title="points ahead of the best team outside the cut line"><span class="lg">Advancing </span>+${pts(t.gap)}</span>`
-    : `<span class="chip out" title="points behind the last team inside the cut line"><span class="lg">Out by </span><span class="sm">−</span>${pts(-t.gap)}</span>`;
+  const gapChip = (t) => t.gap == null ? (t.adv ? `<span class="chip">Advancing</span>` : t.adv === false ? `<span class="chip out">Out</span>` : `<span class="chip wait">Not started</span>`)
+    : t.adv ? `<span class="chip" title="points ahead of the best team outside the cut line">Advancing +${pts(t.gap)}</span>`
+    : `<span class="chip out" title="points behind the last team inside the cut line">Out by ${pts(-t.gap)}</span>`;
   const place = (t) => t.rank == null ? "—" : `<b>${t.rank}</b><span class="of"> / ${t.entrants ?? "—"}</span>`;
   const L = (long, short) => `<span class="lg">${long}</span><span class="sm">${short}</span>`;
+  const shortName = (c) => String(c ?? "").replace(/\s*\[[^\]]*\]/g, "").trim(); // phone: "$20M Millionaire [$3M to 1st]" → "$20M Millionaire"
   // columns per tab: [sort key | null, label, css class, cell html]
   const COLS = {
     teams: [[null, "", "rk num", (t) => t.n],
-      ["contest", "Tournament", "contest", (t) => `${esc(t.contest)}<div class="under sm">${money(t.buyIn)} · drafted ${day(t.date)} · ${t.rank == null ? "no place yet" : `${t.rank} of ${t.entrants}`}</div>`],
+      ["contest", "Tournament", "contest", (t) => `<span class="lg">${esc(t.contest)}</span><span class="sm">${esc(shortName(t.contest))}</span><div class="under sm">${t.rank == null ? "no place yet" : `<b>${t.rank}</b>/${t.entrants}`} · ${money(t.buyIn)} · ${day(t.date)}</div>`],
       ["buyIn", "Entry fee", "num col-buyin", (t) => money(t.buyIn)], ["date", "Drafted", "col-date", (t) => day(t.date)],
-      ["rank", L("League place", "Place"), "col-place", place], ["gap", "Cut line", "", gapChip],
-      ["left", "Left", "num col-left", (t) => t.left ?? "—"], ["points", "Points", "num", (t) => `<b>${pts(t.points)}</b>`]],
-    exposure: [[null, "", "rk num", (r) => r.n], ["name", "Player", "user", (r) => `${posTag(r.pos)} ${logo(r.team)}<span class="pname">${esc(r.name)}</span>`],
-      ["buyIn", "Entry fees", "num", (r) => money(r.buyIn)], ["own", L("Exposure", "Exp"), "num", (r) => pc1(r.own)], ["advancing", "Advancing", "num col-buyin", (r) => r.advancing],
-      ["advRate", L("Advance rate", "Adv %"), "num", (r) => pc1(r.advRate)], ["avgPick", "Avg pick", "num col-date", (r) => r.avgPick == null ? "—" : Number(r.avgPick).toFixed(1)]],
+      ["rank", L("League place", "Place"), "col-place", place], ["gap", "Cut line", "gap", gapChip],
+      ["left", "Left", "num col-left", (t) => t.left ?? "—"], ["points", "Points", "num points", (t) => `<b>${pts(t.points)}</b>`]],
+    exposure: [[null, "", "rk num", (r) => r.n], ["name", "Player", "user", (r) => `${posTag(r.pos)} ${logo(r.team)}<span class="pname">${esc(r.name)}</span><div class="under sm">${pc1(r.own)} of teams · ${r.advancing} advancing · pick ${r.avgPick == null ? "—" : Number(r.avgPick).toFixed(1)}</div>`],
+      ["buyIn", "Entry fees", "num points", (r) => `<b>${money(r.buyIn)}</b>`], ["own", L("Exposure", "Exp"), "num col-own", (r) => pc1(r.own)], ["advancing", "Advancing", "num col-buyin", (r) => r.advancing],
+      ["advRate", L("Advance rate", "Adv %"), "num col-left", (r) => pc1(r.advRate)], ["avgPick", "Avg pick", "num col-date", (r) => r.avgPick == null ? "—" : Number(r.avgPick).toFixed(1)]],
   };
   const ASC_FIRST = new Set(["name", "avgPick", "rank", "date", "contest"]);
+  // the phone's sort menu (the table header is hidden there): [label, key, dir]
+  const SORTS = {
+    teams: [["Points", "points", "desc"], ["Cut line", "gap", "desc"], ["Entry fee", "buyIn", "desc"], ["Newest draft", "date", "desc"], ["League place", "rank", "asc"], ["Tournament", "contest", "asc"]],
+    exposure: [["Entry fees", "buyIn", "desc"], ["Exposure", "own", "desc"], ["Advance rate", "advRate", "desc"], ["Avg pick", "avgPick", "asc"], ["Name", "name", "asc"]],
+  };
 
   const params = (extra) => { const q = { view: F.tab === "exposure" ? "players" : "teams", u: who, t: F.t, sort: F.sort, dir: F.dir, ...extra };
     if (F.tab === "teams") { q.p = F.p; q.adv = F.adv; } else q.pos = F.pos;
@@ -121,13 +134,14 @@
 
   function renderHeader(P) {
     $("name").textContent = P.user; document.title = `${P.user} · dkbbdb`;
-    $("sub").textContent = `DraftKings best ball · ${plural(P.teams, "team")} · NFL week ${data.week}`;
+    $("sub").innerHTML = `<span class="lg">DraftKings best ball · </span>${plural(P.teams, "team")} · NFL week ${data.week}`;
+    // tiles: [label, value html, sub-line, entry id, css class]. A phone shows only Advancing and Entry fees, no sub-lines
     const ranked = P.advancing + P.out, tiles = [
-      ["Teams", P.teams.toLocaleString(), `in ${plural(P.tournaments.length, "tournament")}`],
-      ["Entry fees", money(P.buyIn), ranked ? `${money(P.advBuyIn)} on advancing teams` : ""],
-      ["Advancing", P.advancing.toLocaleString(), ranked ? `${pct(P.advancing, ranked)} of ${plural(ranked, "team")} with a league place` : "no league places yet"],
-      ["Best team", P.best ? pts(P.best.points) : "—", P.best ? `${P.best.rank ?? "—"} of ${P.best.entrants ?? "—"} · ${P.best.contest}` : "", P.best?.id]];
-    $("tiles").innerHTML = tiles.map(([k, v, d, id]) => `<div class="tile${id ? " link" : ""}"${id ? ` data-id="${esc(id)}" tabindex="0" title="Open this team's league"` : ""}><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="d" title="${esc(d)}">${esc(d)}</div></div>`).join("");
+      ["Teams", P.teams.toLocaleString(), `in ${plural(P.tournaments.length, "tournament")}`, null, "t-teams"],
+      ["Entry fees", money(P.buyIn), ranked ? `${money(P.advBuyIn)} on advancing teams` : "", null, "t-fees"],
+      ["Advancing", `<span class="good">${P.advancing.toLocaleString()}</span><span class="of sm"> of ${P.teams.toLocaleString()}</span>`, ranked ? `${pct(P.advancing, ranked)} of ${plural(ranked, "team")} with a league place` : "no league places yet", null, "t-adv"],
+      ["Best team", P.best ? pts(P.best.points) : "—", P.best ? `${P.best.rank ?? "—"} of ${P.best.entrants ?? "—"} · ${P.best.contest}` : "", P.best?.id, "t-best"]];
+    $("tiles").innerHTML = tiles.map(([k, v, d, id, cls]) => `<div class="tile ${cls}${id ? " link" : ""}"${id ? ` data-id="${esc(id)}" tabindex="0" title="Open this team's league"` : ""}><div class="k">${esc(k)}</div><div class="v">${v}</div><div class="d" title="${esc(d)}">${esc(d)}</div></div>`).join("");
     const parts = [["adv", P.advancing, "advancing"], ["out", P.out, "out"], ["wait", P.unranked, "not started"]];
     $("split").hidden = !P.teams;
     for (const [cls, n] of parts) $("split").querySelector("." + cls).style.width = `${P.teams ? 100 * n / P.teams : 0}%`;
@@ -153,9 +167,20 @@
     $("posPills").hidden = F.tab !== "exposure"; $("advWrap").hidden = F.tab !== "teams"; $("advOnly").checked = F.adv === "1";
     $("fP").hidden = F.tab !== "teams";
 
-    // chosen players (Teams tab): chips + one line of numbers against the teams in view
+    // the phone's sort menu mirrors the current sort
+    const sorts = SORTS[F.tab];
+    $("fS").replaceChildren(...sorts.map(([label, key, dir]) => new Option(label, `${key}:${dir}`)));
+    $("fS").value = sorts.some(([, key, dir]) => key === data.sort && dir === data.dir) ? `${data.sort}:${data.dir}` : `${sorts[0][1]}:${sorts[0][2]}`;
+
+    // chosen players (Teams tab): chips + one line of numbers against the teams in view. On a phone the other
+    // filters live in the sheet, so they get chips too (and the funnel button a dot) — the table explains itself
     const chips = [];
     const np = F.tab === "teams" ? f.p.length : 0;
+    const filtered = !!(F.t || np || (F.tab === "teams" && F.adv === "1") || (F.tab === "exposure" && F.pos));
+    $("filterBtn").classList.toggle("on", filtered);
+    if (F.t) chips.push(`<span class="tag sm">${esc(shortName(F.t))}<button data-clear="t" aria-label="All tournaments">✕</button></span>`);
+    if (F.tab === "teams" && F.adv === "1") chips.push(`<span class="tag sm">Advancing only<button data-clear="adv" aria-label="Every team">✕</button></span>`);
+    if (F.tab === "exposure" && F.pos) chips.push(`<span class="tag sm">${posTag(F.pos)}only<button data-clear="pos" aria-label="Every position">✕</button></span>`);
     if (np) {
       for (const p of f.p) chips.push(`<span class="tag">${posTag(p.pos)}${logo(p.team)}${esc(p.name)}<button data-clear="p" data-id="${p.id}" aria-label="Remove ${esc(p.name)}">✕</button></span>`);
       const them = np === 1 ? "him" : np === 2 ? "both" : `all ${np}`;
@@ -174,7 +199,7 @@
   }
   function renderNote() {
     if (!data?.at) return;
-    $("liveNote").innerHTML = `<span class="live"><span class="dot"></span>${data.playing ? "games on" : "live scoring"} · updated ${agoTxt(data.at)}</span>`;
+    $("liveNote").innerHTML = `<span class="live" title="updated ${agoTxt(data.at)}"><span class="dot"></span><span class="lg">${data.playing ? "games on" : "live scoring"} · updated ${agoTxt(data.at)}</span><span class="sm">Live</span></span>`;
   }
 
   let seq = 0;
@@ -197,7 +222,19 @@
   $("tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b && b.dataset.tab !== F.tab) set({ tab: b.dataset.tab, sort: "", dir: "" }); });
   $("posPills").addEventListener("click", (e) => { const b = e.target.closest("[data-pos]"); if (b) set({ pos: b.dataset.pos }); });
   window.dkbbSuggest($("fP"), "player", (r) => set({ p: [...new Set([...pids(), String(r.id)])].slice(0, 5).join(",") }), { u: who });
-  $("active").addEventListener("click", (e) => { const b = e.target.closest("[data-clear]"); if (b) set({ p: pids().filter((id) => id !== b.dataset.id).join(",") }); });
+  $("active").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-clear]"); if (!b) return;
+    if (b.dataset.clear === "p") set({ p: pids().filter((id) => id !== b.dataset.id).join(",") });
+    else set({ [b.dataset.clear]: "" });
+  });
+  $("fS").addEventListener("change", (e) => { const [sort, dir] = e.target.value.split(":"); set({ sort, dir }); });
+  // phone: the filters are a sheet under the funnel button
+  const sheet = (open) => { document.body.classList.toggle("tools-open", open); $("toolsVeil").hidden = !open; $("filterBtn").setAttribute("aria-expanded", String(open)); };
+  $("filterBtn").addEventListener("click", () => sheet(!document.body.classList.contains("tools-open")));
+  $("toolsDone").addEventListener("click", () => sheet(false));
+  $("toolsVeil").addEventListener("click", () => sheet(false));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") sheet(false); });
+  if (location.hash === "#filters") sheet(true);
   $("moreBtn").addEventListener("click", () => { shown += PAGE; load(true); });
   const sortClick = (th) => { const k = th.dataset.sort; set({ sort: k, dir: data?.sort === k ? (data.dir === "asc" ? "desc" : "asc") : ASC_FIRST.has(k) ? "asc" : "desc" }); };
   $("thead").addEventListener("click", (e) => { const th = e.target.closest("[data-sort]"); if (th) sortClick(th); });
