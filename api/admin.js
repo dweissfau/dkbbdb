@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   const d = db();
   const accounts = (await d.query(
     `select a.username, a.created_at, a.synced_at,
-            count(e.entry_id)::int teams, coalesce(sum(c.buy_in), 0)::float fees, count(distinct c.tournament_key)::int tournaments,
+            count(e.entry_id)::int teams, coalesce(sum(c.buy_in), 0)::float fees, count(distinct c.name)::int tournaments,
             max(e.synced_at) last_entry,
             (select count(*)::int from upload_log l where a.user_key = any(l.user_keys)) uploads,
             (select coalesce(sum(rejected), 0)::int from upload_log l where a.user_key = any(l.user_keys)) rejected,
