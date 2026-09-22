@@ -32,7 +32,7 @@ d.getElementById("fT").value = d.getElementById("fT").options[1].value; d.getEle
 ok("tournament filter", rows().length > 0 && rows().every((r) => text(r).includes(d.getElementById("fT").options[1].text.replace(/ \(\d+\)$/, ""))) && tiles.length === 4 && text(d.querySelector(".tile .v")) === text(d.querySelector("#tiles .tile .v")), `${rows().length} rows · ${text(d.getElementById("count"))}`);
 d.getElementById("fT").value = ""; d.getElementById("fT").dispatchEvent(new w.Event("change", { bubbles: true })); await wait();
 click(d.querySelector('[data-tab="exposure"]')); await wait();
-ok("exposure tab", rows().length === 100 && heads().some((h) => /Exposure/.test(h)) && !d.getElementById("posPills").hidden && d.getElementById("fP").hidden && d.getElementById("advWrap").hidden, heads().join(" | "));
+ok("exposure tab", rows().length === 100 && heads().some((h) => /Exposure/.test(h)) && heads().some((h) => /Buy-ins/.test(h)) && !heads().includes("Teams") && /^\$[\d,]+$/.test(text(rows()[0].querySelectorAll("td")[2])) && !d.getElementById("posPills").hidden && d.getElementById("fP").hidden && d.getElementById("advWrap").hidden, heads().join(" | "));
 click(d.querySelector('[data-pos="RB"]')); await wait();
 ok("position pill", rows().every((r) => r.querySelector(".pos")?.textContent === "RB"), `${rows().length} RBs, top ${text(rows()[0]?.querySelector(".pname"))}`);
 const pname = text(rows()[0].querySelector(".pname")); click(rows()[0]); await wait();

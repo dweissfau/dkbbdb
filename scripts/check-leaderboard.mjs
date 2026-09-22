@@ -61,7 +61,9 @@ ok("rows carry players left", all.rows.every((r) => r.left == null || (r.left >=
 const pv = await playersView(db, { limit: 200 });
 const jsn = pv.rows.find((r) => r.id === a.id);
 ok("players view agrees with the player filter", jsn && jsn.teams === onlyA.total && jsn.advancing === onlyA.stats.advancing, `${jsn?.name}: ${jsn?.teams} teams, own ${jsn?.own}%, adv ${jsn?.advRate}%, avg pick ${jsn?.avgPick}`);
-ok("players view: sorted by teams, ownership = teams / field", pv.rows.every((r, i) => i === 0 || pv.rows[i - 1].teams >= r.teams) && pv.rows.every((r) => Math.abs(r.own - 100 * r.teams / pv.stats.field) < 0.01), `${pv.total} players`);
+ok("players view: sorted by buy-ins, ownership = teams / field", pv.rows.every((r, i) => i === 0 || pv.rows[i - 1].buyIn >= r.buyIn) && pv.rows.every((r) => Math.abs(r.own - 100 * r.teams / pv.stats.field) < 0.01) && pv.rows.every((r) => r.buyIn >= 0), `${pv.total} players, top ${pv.rows[0]?.name} ${pv.rows[0]?.buyIn} on ${pv.rows[0]?.teams} teams`);
+const pvF = await playersView(db, { u: "fleaflick", limit: 200 });
+ok("players view: a player's buy-ins = the buy-ins of the teams that have him", pvF.rows.every((r) => r.buyIn === r.teams * 555), `fleaflick: ${pvF.rows[0]?.name} ${pvF.rows[0]?.buyIn} / ${pvF.rows[0]?.teams} teams`);
 const qbs = await playersView(db, { pos: "QB", sort: "advRate", dir: "desc", limit: 50 });
 ok("players view: position filter + sort by advance rate", qbs.rows.every((r) => r.pos === "QB") && qbs.rows.filter((r) => r.advRate != null).every((r, i, l) => i === 0 || l[i - 1].advRate >= r.advRate), `${qbs.total} QBs, top ${qbs.rows[0]?.name} ${qbs.rows[0]?.advRate}%`);
 const pvU = await playersView(db, { u: "fleaflick" });
