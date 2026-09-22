@@ -22,7 +22,6 @@ await wait(6000);
 ok("header names the account and the week", text(d.getElementById("name")).toLowerCase() === name.toLowerCase() && /NFL week \d+/.test(text(d.getElementById("sub"))), text(d.getElementById("sub")));
 const tiles = [...d.querySelectorAll(".tile")];
 ok("four tiles: teams, buy-ins, advancing, best team", tiles.length === 4 && tiles.map((t) => text(t.querySelector(".k"))).join("|") === "Teams|Entry fees|Advancing|Best team", tiles.map((t) => text(t)).join(" · "));
-ok("advancing split bar with a legend", !d.getElementById("split").hidden && /advancing/.test(text(d.querySelector(".split .legend"))), text(d.querySelector(".split .legend")));
 ok("teams table: no username column, tournament first", rows().length === 100 && heads()[1] === "Tournament" && !heads().includes("User"), heads().join(" | "));
 ok("tournament dropdown lists this account's tournaments with counts", d.getElementById("fT").options.length > 1 && /\(\d+\)/.test(d.getElementById("fT").options[1].text), d.getElementById("fT").options[1].text);
 ok("cut-line chip on the top row", /Advancing|Out/.test(text(rows()[0])), text(rows()[0]).slice(0, 100));

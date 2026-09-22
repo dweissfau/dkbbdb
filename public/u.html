@@ -23,10 +23,6 @@
     <span class="note" id="liveNote"></span>
   </header>
   <div class="tiles" id="tiles"></div>
-  <div class="split" id="split" hidden>
-    <div class="track"><i class="adv"></i><i class="out"></i><i class="wait"></i></div>
-    <div class="legend"></div>
-  </div>
 
   <div class="panel" id="panel">
     <div class="head">
@@ -142,10 +138,6 @@
       ["Advancing", `<span class="good">${P.advancing.toLocaleString()}</span><span class="of sm"> of ${P.teams.toLocaleString()}</span>`, ranked ? `${pct(P.advancing, ranked)} of ${plural(ranked, "team")} with a league place` : "no league places yet", null, "t-adv"],
       ["Best team", P.best ? pts(P.best.points) : "—", P.best ? `${P.best.rank ?? "—"} of ${P.best.entrants ?? "—"} · ${P.best.contest}` : "", P.best?.id, "t-best"]];
     $("tiles").innerHTML = tiles.map(([k, v, d, id, cls]) => `<div class="tile ${cls}${id ? " link" : ""}"${id ? ` data-id="${esc(id)}" tabindex="0" title="Open this team's league"` : ""}><div class="k">${esc(k)}</div><div class="v">${v}</div><div class="d" title="${esc(d)}">${esc(d)}</div></div>`).join("");
-    const parts = [["adv", P.advancing, "advancing"], ["out", P.out, "out"], ["wait", P.unranked, "not started"]];
-    $("split").hidden = !P.teams;
-    for (const [cls, n] of parts) $("split").querySelector("." + cls).style.width = `${P.teams ? 100 * n / P.teams : 0}%`;
-    $("split").querySelector(".legend").innerHTML = parts.filter(([, n]) => n).map(([cls, n, w]) => `<span><i class="${cls}"></i><b>${n.toLocaleString()}</b> ${w}</span>`).join("");
   }
 
   function render() {
