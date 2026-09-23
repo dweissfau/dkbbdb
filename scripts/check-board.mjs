@@ -4,7 +4,7 @@ import { connect, loadEnv } from "./db.mjs";
 import { buildBase } from "../lib/base.js";
 import { getFeeds } from "../lib/feeds.js";
 import { computeSnapshot, foldWeeks } from "../lib/pubscore.js";
-import { computeBoard, leaderboard, refreshBoard, refreshAfterMs, cachePut, cacheGet, REFRESH_PLAYING_MS, REFRESH_IDLE_MS, REFRESH_UNKNOWN_MS } from "../lib/leaderboard.js";
+import { computeBoard, leaderboard, refreshBoard, refreshAfterMs, cachePut, cacheGet, _forget, REFRESH_PLAYING_MS, REFRESH_IDLE_MS, REFRESH_UNKNOWN_MS } from "../lib/leaderboard.js";
 
 process.env.DATABASE_URL ??= loadEnv().DATABASE_URL;
 process.env.DKBBDB_SYNC_BOARD = "1";
@@ -66,6 +66,17 @@ ok("board survives the shared-cache round trip", stored && back?.storedAt === t 
   delete process.env.DKBBDB_SYNC_BOARD; await cachePut(first, Date.now());
   const r = await leaderboard(spy, { limit: 5 }, Date.now() + 20e3); // past the instance's 15 s memory, inside the refresh window
   ok("a request served from the shared cache never reads board_cache", r.total === want.size && !seen.some((q) => /from board_cache/.test(q)), `${seen.length} db queries`);
+  // someone who has just synced: their username is not on the board yet -> refresh now, not in 30 minutes
+  const L = await import("../lib/leaderboard.js");
+  _forget(); await cachePut(first, Date.now() - 90e3);
+  const known = await leaderboard(spy, { u: first.teams[0].user, limit: 1 }); const s1 = L.lastServed;
+  _forget(); await cachePut(first, Date.now() - 90e3);
+  const fresh = await leaderboard(spy, { u: "someone-who-just-synced", limit: 1 }); const s2 = L.lastServed;
+  ok("a known username on an idle board is served from the cache", known.total > 0 && s1 === "cache", s1);
+  ok("an unknown username refreshes the board at once (once a minute at most)", fresh.total === 0 && s2 === "run", s2);
+  _forget(); await cachePut(first, Date.now() - 30e3);
+  await leaderboard(spy, { u: "someone-who-just-synced", limit: 1 });
+  ok("...but not when the board is under a minute old", L.lastServed === "cache", L.lastServed);
   process.env.DKBBDB_SYNC_BOARD = "1";
 }
 
