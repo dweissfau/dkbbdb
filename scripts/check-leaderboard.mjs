@@ -39,7 +39,9 @@ const combo = await leaderboard(db, { p: p.id, u: "kknox20", t });
 ok("filters combine (player within username + tournament)", combo.stats.field === (await leaderboard(db, { u: "kknox20", t })).total && combo.total <= byP.total, `${combo.total} of ${combo.stats.field}`);
 // two players at once = teams that have BOTH
 const [a, b2] = [(await searchPlayers(db, "jaxon smith"))[0], (await searchPlayers(db, "brock bowers"))[0]];
-const [onlyA, onlyB, both] = [await leaderboard(db, { p: a.id, limit: 200 }), await leaderboard(db, { p: b2.id, limit: 200 }), await leaderboard(db, { p: `${a.id},${b2.id}`, limit: 200 })];
+// every row, not one page: a popular player is on more than 200 teams now
+const allRows = async (q) => { const first = await leaderboard(db, { ...q, limit: 200 }); let rows = first.rows; while (rows.length < first.total) rows = rows.concat((await leaderboard(db, { ...q, limit: 200, offset: rows.length })).rows); return { ...first, rows }; };
+const [onlyA, onlyB, both] = [await allRows({ p: a.id }), await allRows({ p: b2.id }), await allRows({ p: `${a.id},${b2.id}` })];
 const idsB = new Set(onlyB.rows.map((r) => r.id)), expect = onlyA.rows.filter((r) => idsB.has(r.id)).map((r) => r.id).sort().join();
 ok("two players = intersection of each one's teams", both.rows.map((r) => r.id).sort().join() === expect && both.filter.p.length === 2 && both.stats.field === all.teams,
   `${a.name} ${onlyA.total} · ${b2.name} ${onlyB.total} · both ${both.total} (advancing ${both.stats.advancing})`);

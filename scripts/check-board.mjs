@@ -4,7 +4,7 @@ import { connect, loadEnv } from "./db.mjs";
 import { buildBase } from "../lib/base.js";
 import { getFeeds } from "../lib/feeds.js";
 import { computeSnapshot, foldWeeks } from "../lib/pubscore.js";
-import { computeBoard, leaderboard, refreshBoard } from "../lib/leaderboard.js";
+import { computeBoard, leaderboard, refreshBoard, refreshAfterMs, cachePut, cacheGet, REFRESH_PLAYING_MS, REFRESH_IDLE_MS, REFRESH_UNKNOWN_MS } from "../lib/leaderboard.js";
 
 process.env.DATABASE_URL ??= loadEnv().DATABASE_URL;
 process.env.DKBBDB_SYNC_BOARD = "1";
@@ -48,6 +48,26 @@ const lock = await db.query("update board_cache set refreshing_at = now() where 
 const lock2 = await db.query("update board_cache set refreshing_at = now() where id = 1 and (refreshing_at is null or refreshing_at < now() - interval '2 minutes') returning 1");
 ok("only one refresh can run at a time", lock.rowCount === 1 && lock2.rowCount === 0);
 await db.query("update board_cache set refreshing_at = null where id = 1");
+
+// refresh cadence: once a minute only while games are on or about to start, otherwise every 30 minutes
+const t = Date.now(), idle = { live: true, playing: false, games: { pending: [t + 3 * 3600e3] } };
+ok("board refreshes every minute while a game is playing", refreshAfterMs({ ...idle, playing: true }, t) === REFRESH_PLAYING_MS);
+ok("board refreshes every 30 minutes when no game is near", refreshAfterMs(idle, t) === REFRESH_IDLE_MS);
+ok("…every minute again from 20 minutes before a kickoff", refreshAfterMs({ ...idle, games: { pending: [t + 15 * 60e3] } }, t) === REFRESH_PLAYING_MS);
+ok("…and for 30 minutes after a kickoff the stored board did not see start", refreshAfterMs({ ...idle, games: { pending: [t - 25 * 60e3] } }, t) === REFRESH_PLAYING_MS && refreshAfterMs({ ...idle, games: { pending: [t - 45 * 60e3] } }, t) === REFRESH_IDLE_MS);
+ok("every 5 minutes when no schedule is known", refreshAfterMs({ ...idle, games: null }, t) === REFRESH_UNKNOWN_MS);
+ok("the stored board carries this week's pending kickoffs", first.games && Array.isArray(first.games.pending), JSON.stringify(first.games?.pending?.slice(0, 3)));
+
+// the shared cache round trip (in-memory stand-in outside Vercel): gzip'd copy comes back identical
+const stored = await cachePut(first, t), back = await cacheGet();
+ok("board survives the shared-cache round trip", stored && back?.storedAt === t && JSON.stringify(back.body) === JSON.stringify(first), `${(JSON.stringify(first).length / 1024).toFixed(0)} KB json`);
+{ // a request served from the shared cache does not read the board out of the database
+  const seen = []; const spy = { query: (sql, args) => { seen.push(String(sql)); return db.query(sql, args); }, end: () => {} };
+  delete process.env.DKBBDB_SYNC_BOARD; await cachePut(first, Date.now());
+  const r = await leaderboard(spy, { limit: 5 }, Date.now() + 20e3); // past the instance's 15 s memory, inside the refresh window
+  ok("a request served from the shared cache never reads board_cache", r.total === want.size && !seen.some((q) => /from board_cache/.test(q)), `${seen.length} db queries`);
+  process.env.DKBBDB_SYNC_BOARD = "1";
+}
 
 await db.end();
 console.log(checks.every(Boolean) ? `\nall ${checks.length} checks pass` : `\n${checks.filter((c) => !c).length} FAILED`);
