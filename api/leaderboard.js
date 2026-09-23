@@ -1,6 +1,6 @@
 // GET /api/leaderboard — a profile page's data: one account's teams, scored like every other page (lib/leaderboard.js).
 //   ?view=teams (default)  &u=<dk username>&t=<tournament>&p=<dk player id[,id…]>&adv=1&sort=&dir=&offset=&limit=
-//   ?view=players          &u=<dk username>&t=&pos=QB|RB|WR|TE&sort=&dir=&offset=&limit=
+//   ?view=players          &u=<dk username>&t=&pos=QB|RB|WR|TE&q=<part of a name>&sort=&dir=&offset=&limit=
 // The username is REQUIRED: the whole-field leaderboard (every synced account, public/leaderboard.html) is kept for
 // the day DraftKings publishes everyone's teams and is only served when DKBBDB_FIELD=1 is set on the deployment.
 import { db } from "../lib/db.js";

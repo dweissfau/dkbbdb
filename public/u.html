@@ -40,6 +40,10 @@
           <input type="search" placeholder="Teams with a player…" aria-label="Player" spellcheck="false">
           <div class="hits" hidden></div>
         </form>
+        <!-- Exposure tab: a plain search box that narrows the player list by name as you type -->
+        <form class="find" id="fQ" autocomplete="off" hidden>
+          <input type="search" placeholder="Find a player…" aria-label="Player name" spellcheck="false">
+        </form>
         <div class="pills" id="posPills" hidden>
           <button class="pill mini on" data-pos="">All</button><button class="pill mini" data-pos="QB">QB</button><button class="pill mini" data-pos="RB">RB</button><button class="pill mini" data-pos="WR">WR</button><button class="pill mini" data-pos="TE">TE</button>
         </div>
@@ -89,10 +93,10 @@
   const remember = (name) => { try { localStorage.setItem("dkbbdb-me", name); } catch { /* private window */ } };
   const isMe = () => { try { return (localStorage.getItem("dkbbdb-me") ?? "").toLowerCase() === who.toLowerCase(); } catch { return false; } };
 
-  // the view lives in the address: /u/<name>?tab=exposure &t=tournament &p=playerId[,id…] &adv=1 &pos=QB &sort=&dir= &team=entryId
+  // the view lives in the address: /u/<name>?tab=exposure &t=tournament &p=playerId[,id…] &adv=1 &pos=QB &q=name &sort=&dir= &team=entryId
   const sp = new URLSearchParams(location.search);
   const F = { tab: sp.get("tab") === "exposure" ? "exposure" : "teams", t: sp.get("t") ?? "", p: sp.get("p") ?? "", adv: sp.get("adv") === "1" ? "1" : "",
-    pos: sp.get("pos") ?? "", sort: sp.get("sort") ?? "", dir: sp.get("dir") ?? "", team: sp.get("team") ?? "" };
+    pos: sp.get("pos") ?? "", q: sp.get("q") ?? "", sort: sp.get("sort") ?? "", dir: sp.get("dir") ?? "", team: sp.get("team") ?? "" };
   let data = null, rows = [], shown = PAGE;
 
   const gapChip = (t) => t.gap == null ? (t.adv ? `<span class="chip">Advancing</span>` : t.adv === false ? `<span class="chip out">Out</span>` : `<span class="chip wait">Not started</span>`)
@@ -120,7 +124,7 @@
   };
 
   const params = (extra) => { const q = { view: F.tab === "exposure" ? "players" : "teams", u: who, t: F.t, sort: F.sort, dir: F.dir, ...extra };
-    if (F.tab === "teams") { q.p = F.p; q.adv = F.adv; } else q.pos = F.pos;
+    if (F.tab === "teams") { q.p = F.p; q.adv = F.adv; } else { q.pos = F.pos; q.q = F.q.trim(); }
     return new URLSearchParams(Object.entries(q).filter(([, v]) => v !== "" && v != null)); };
   const url = (offset, limit) => "/api/leaderboard?" + params({ offset, limit });
   function pushState() {
@@ -158,7 +162,8 @@
     for (const b of $("tabs").children) b.classList.toggle("on", b.dataset.tab === F.tab);
     for (const b of $("posPills").children) b.classList.toggle("on", b.dataset.pos === F.pos);
     $("posPills").hidden = F.tab !== "exposure"; $("advWrap").hidden = F.tab !== "teams"; $("advOnly").checked = F.adv === "1";
-    $("fP").hidden = F.tab !== "teams";
+    $("fP").hidden = F.tab !== "teams"; $("fQ").hidden = F.tab !== "exposure";
+    { const q = $("fQ").querySelector("input"); if (q.value !== F.q && document.activeElement !== q) q.value = F.q; } // a link's ?q=, not the box mid-typing
 
     // the phone's sort menu mirrors the current sort
     const sorts = SORTS[F.tab];
@@ -169,11 +174,13 @@
     // filters live in the sheet, so they get chips too (and the funnel button a dot) — the table explains itself
     const chips = [];
     const np = F.tab === "teams" ? f.p.length : 0;
-    const filtered = !!(F.t || np || (F.tab === "teams" && F.adv === "1") || (F.tab === "exposure" && F.pos));
+    const nq = F.tab === "exposure" ? F.q.trim() : "";
+    const filtered = !!(F.t || np || (F.tab === "teams" && F.adv === "1") || (F.tab === "exposure" && (F.pos || nq)));
     $("filterBtn").classList.toggle("on", filtered);
     if (F.t) chips.push(`<span class="tag sm">${esc(shortName(F.t))}<button data-clear="t" aria-label="All tournaments">✕</button></span>`);
     if (F.tab === "teams" && F.adv === "1") chips.push(`<span class="tag sm">Advancing only<button data-clear="adv" aria-label="Every team">✕</button></span>`);
     if (F.tab === "exposure" && F.pos) chips.push(`<span class="tag sm">${posTag(F.pos)}only<button data-clear="pos" aria-label="Every position">✕</button></span>`);
+    if (nq) chips.push(`<span class="tag">“${esc(nq)}”<button data-clear="q" aria-label="Clear the name search">✕</button></span>`);
     if (np) {
       for (const p of f.p) chips.push(`<span class="tag">${posTag(p.pos)}${logo(p.team)}${esc(p.name)}<button data-clear="p" data-id="${p.id}" aria-label="Remove ${esc(p.name)}">✕</button></span>`);
       const them = np === 1 ? "him" : np === 2 ? "both" : `all ${np}`;
@@ -181,7 +188,8 @@
     }
     $("active").innerHTML = chips.join(""); $("active").hidden = !chips.length;
 
-    $("count").textContent = F.tab === "teams" ? `${plural(data.total, "team")} · click one to see its league` : `${plural(data.total, "player")} · click one to see the teams that have him`;
+    $("count").textContent = F.tab === "teams" ? `${plural(data.total, "team")} · click one to see its league`
+      : nq && !data.total ? `nobody matching “${nq}” on these teams` : `${plural(data.total, "player")} · click one to see the teams that have him`;
     const thClass = (cls) => cls.split(" ").filter((c) => c === "num" || c.startsWith("col-")).join(" ");
     $("thead").innerHTML = cols.map(([key, label, cls]) => `<th class="${thClass(cls)}${key ? " sortable" : ""}"${key ? ` data-sort="${key}" tabindex="0"` : ""}>${label}${key && data.sort === key ? `<span class="arrow">${data.dir === "asc" ? "▲" : "▼"}</span>` : ""}</th>`).join("");
     const attr = (r) => F.tab === "teams" ? `data-id="${esc(r.id)}"` : `data-player="${r.id}"`;
@@ -215,6 +223,10 @@
   $("tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b && b.dataset.tab !== F.tab) set({ tab: b.dataset.tab, sort: "", dir: "" }); });
   $("posPills").addEventListener("click", (e) => { const b = e.target.closest("[data-pos]"); if (b) set({ pos: b.dataset.pos }); });
   window.dkbbSuggest($("fP"), "player", (r) => set({ p: [...new Set([...pids(), String(r.id)])].slice(0, 5).join(",") }), { u: who });
+  // Exposure tab: typing narrows the player list (a short pause so each keystroke is not a request); Enter just closes the keyboard
+  { let timer = 0; const q = $("fQ").querySelector("input");
+    q.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(() => { if (q.value !== F.q) set({ q: q.value }); }, 220); });
+    $("fQ").addEventListener("submit", (e) => { e.preventDefault(); clearTimeout(timer); if (q.value !== F.q) set({ q: q.value }); q.blur(); }); }
   $("active").addEventListener("click", (e) => {
     const b = e.target.closest("[data-clear]"); if (!b) return;
     if (b.dataset.clear === "p") set({ p: pids().filter((id) => id !== b.dataset.id).join(",") });
