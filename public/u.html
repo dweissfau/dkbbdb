@@ -149,9 +149,10 @@
         ranked ? "" : scopeName ? "no league places on these teams yet" : "no league places yet", "t-adv"],
       // Winning = the guaranteed prizes of the teams inside the cut line (next round's minimum), plus anything already
       // credited. A tournament whose payout table is not on file yet shows up in the detail, not in the total.
-      ["Winning", `<span class="good">${money(S.winning)}</span>${tg}`,
-        S.winUnknown ? `payout table missing for ${plural(S.winUnknown, "advancing team")} · sync again` : S.winTeams ? `${plural(S.winTeams, "team")} inside the money` : ranked ? "no team inside the cut line" : "", "t-fees"]];
-    $("tiles").innerHTML = tiles.map(([k, v, d, cls]) => `<div class="tile ${cls}"><div class="k">${esc(k)}${d ? `<span class="d"> · ${esc(d)}</span>` : ""}</div><div class="v">${v}</div></div>`).join("");
+      // just the word under the number; a missing payout table is only mentioned on hover
+      ["Winning", `<span class="good">${money(S.winning)}</span>${tg}`, "", "t-fees",
+        S.winUnknown ? `payout table not on file yet for ${plural(S.winUnknown, "advancing team")} — sync again to add it` : ""]];
+    $("tiles").innerHTML = tiles.map(([k, v, d, cls, tip]) => `<div class="tile ${cls}"${tip ? ` title="${esc(tip)}"` : ""}><div class="k">${esc(k)}${d ? `<span class="d"> · ${esc(d)}</span>` : ""}</div><div class="v">${v}</div></div>`).join("");
   }
 
   function render() {
