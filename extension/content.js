@@ -141,28 +141,35 @@
       [`https://api.draftkings.com/contests/v1/megacontests/${mega}?format=json`, "application/json"],
       [`https://www.draftkings.com/contest/gamecenter/${mega}`, "text/html"]] : []),
   ];
-  // → { sent, read } — tournaments captured, and those whose ladder dkbbdb could read straight away
+  // → { sent, read, tried, missing: [{ key, name }], error } — tournaments captured, those whose ladder dkbbdb
+  // could read straight away, and those still without one (the panel links to their pages)
   async function capturePayouts(contests, haveLadders, say) {
     const todo = new Map();
     for (const c of contests) {
       const key = String(c.TournamentKey ?? "").toUpperCase();
       if (/^[0-9A-F]{32}$/.test(key) && !haveLadders.has(key) && !todo.has(key)) todo.set(key, { key, name: c.ContestName ?? null, mega: c.MegaContestId ?? null });
     }
-    let sent = 0, read = 0, i = 0;
+    let sent = 0, read = 0, i = 0, error = null; const missing = [];
     for (const t of todo.values()) {
       say(`Reading payout tables… (${++i} of ${todo.size})`);
-      const sources = [];
-      for (const [url, accept] of tournamentUrls(t.key, t.mega)) {
-        const r = await bg({ type: "FETCH_DK", url, accept });
-        const body = excerptOf(r);
-        if (body) sources.push({ url, status: r.status, body });
-        await sleep(150);
-      }
-      if (!sources.length) continue;
-      const r = await bg({ type: "TOURNAMENTS", tournaments: [{ key: t.key, name: t.name, sources }] });
-      if (r?.ok) { sent++; if (r.tournaments?.[t.key]?.ladder) read++; }
+      let got = false;
+      try {
+        const sources = [];
+        for (const [url, accept] of tournamentUrls(t.key, t.mega)) {
+          const r = await bg({ type: "FETCH_DK", url, accept });
+          const body = excerptOf(r);
+          if (body) sources.push({ url, status: r.status, body });
+          await sleep(150);
+        }
+        if (sources.length) {
+          const r = await bg({ type: "TOURNAMENTS", tournaments: [{ key: t.key, name: t.name, sources }] });
+          if (r?.ok) { sent++; if (r.tournaments?.[t.key]?.ladder) { read++; got = true; } }
+          else error ??= r?.error ?? "upload failed";
+        }
+      } catch (err) { error ??= String(err?.message ?? err); }
+      if (!got) missing.push({ key: t.key, name: t.name });
     }
-    return { sent, read, tried: todo.size };
+    return { sent, read, tried: todo.size, missing, error };
   }
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -235,6 +242,26 @@
     btn.disabled = bestBall.length === 0;
   });
   const showLink = (text, href) => { link.textContent = text; link.href = href; link.style.display = "block"; };
+  // tournaments whose payout table dkbbdb still lacks: one link each — the tournament's page reads the table
+  // (its Contest Details pop-up) and the tab closes itself
+  const missingBox = document.createElement("div");
+  missingBox.style.cssText = "display:none;margin-top:10px;padding-top:8px;border-top:1px solid #383835;color:#c3c2b7";
+  panel.insertBefore(missingBox, note);
+  const shortName = (n) => String(n ?? "").replace(/^NFL Best Ball\s+/i, "").replace(/\s*\((Early Bird )?Tournament\)\s*$/i, "");
+  function showMissing(list) {
+    missingBox.replaceChildren(); missingBox.style.display = list?.length ? "block" : "none";
+    if (!list?.length) return;
+    const head = document.createElement("div");
+    head.textContent = `Payout table still needed for ${list.length} tournament${list.length === 1 ? "" : "s"} — open each (the tab reads it and closes):`;
+    head.style.cssText = "margin-bottom:4px";
+    missingBox.appendChild(head);
+    for (const t of list) {
+      const a = document.createElement("a");
+      a.href = `https://www.draftkings.com/draft/tournament/${t.key.toLowerCase()}`; a.target = "_blank";
+      a.textContent = shortName(t.name) || t.key; a.style.cssText = "display:block;color:#3987e5;margin:2px 0";
+      missingBox.appendChild(a);
+    }
+  }
 
   const PACE_MS = 350; // polite pacing between DraftKings requests
   const CHUNK = 25;    // drafts per upload
@@ -285,12 +312,15 @@
       for (const n of r.usernames ?? []) usernames.add(n);
     }
     // payout tables for tournaments dkbbdb has none for yet (the "Winning" stat)
-    let pay = { sent: 0, read: 0, tried: 0 };
-    try { pay = await capturePayouts(bestBall, new Set((known.ladders ?? []).map((k) => String(k).toUpperCase())), (t) => { status.textContent = t; }); } catch { /* never blocks a sync */ }
+    let pay = { sent: 0, read: 0, tried: 0, missing: [], error: null };
+    try { pay = await capturePayouts(bestBall, new Set((known.ladders ?? []).map((k) => String(k).toUpperCase())), (t) => { status.textContent = t; }); }
+    catch (err) { pay.error = String(err?.message ?? err); }
     const problems = [...errors, ...serverErrors];
     status.textContent = `Done — ${teamsTxt(bestBall.length)} on dkbbdb (${todo.length} new or updated).` +
-      (pay.tried ? `\nPayout tables: ${pay.read} of ${pay.tried} read${pay.sent > pay.read ? `, ${pay.sent - pay.read} sent for a closer look` : ""}.` : "") +
+      (pay.tried ? `\nPayout tables: ${pay.read} of ${pay.tried} read.` : "\nPayout tables: all on dkbbdb.") +
+      (pay.error ? `\nPayout tables: ${pay.error}` : "") +
       (problems.length ? `\n${problems.length} problem${problems.length === 1 ? "" : "s"}:\n${problems.slice(0, 4).join("\n")}` : "");
+    showMissing(pay.missing);
     const names = [...usernames];
     bg({ type: "SYNCED", usernames: names, teams: bestBall.length });
     if (names.length) showLink(`See ${names[0]} on the leaderboard ↗`, `https://dkbbdb.com/?u=${encodeURIComponent(names[0])}`);

@@ -58,8 +58,9 @@
     const r = await bg({ type: "TOURNAMENTS", tournaments: [{ key: key.toUpperCase(), name, sources: [{ url: `dom:/draft/tournament/${key.toLowerCase()}`, status: 200, body }] }] });
     const got = r?.tournaments?.[key.toUpperCase()]?.ladder;
     toast(!r?.ok ? `dkbbdb: could not send the payout table (${r?.error ?? "unknown error"})`
-      : got ? `dkbbdb: payout table read — reaching round 2 is worth at least $${got["2"]}`
+      : got ? `dkbbdb: payout table read — reaching round 2 is worth at least $${got["2"]}${window.opener ? " · closing this tab" : ""}`
       : looksLikeTable(text) ? "dkbbdb: payout text sent for a closer look" : "dkbbdb: page sent — click Contest Details to show the payout table");
+    if (r?.ok && got && window.opener) setTimeout(() => window.close(), 2500); // opened from the sync panel: done here
   }
   // whenever the page changes (a tab opened, the table rendered), send again once it looks like a payout table
   function watch() {
