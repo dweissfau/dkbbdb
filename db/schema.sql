@@ -151,3 +151,6 @@ create table if not exists tournament_captures (
   primary key (tournament_key, source)
 );
 create index if not exists tournament_captures_sender_at on tournament_captures (sender, at desc);
+-- round structure read from the same capture: { "1": { "adv": 2, "size": 12 }, "2": { "adv": 1, "size": 12 }, … }
+-- (how many of how many advance from each round) — the advance cutoff when DraftKings' PositionsPaid is unknown
+alter table tournaments add column if not exists rounds jsonb;
