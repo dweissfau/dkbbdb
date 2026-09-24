@@ -315,12 +315,17 @@
     let pay = { sent: 0, read: 0, tried: 0, missing: [], error: null };
     try { pay = await capturePayouts(bestBall, new Set((known.ladders ?? []).map((k) => String(k).toUpperCase())), (t) => { status.textContent = t; }); }
     catch (err) { pay.error = String(err?.message ?? err); }
+    // what dkbbdb still lacks, from its own records (the contests page does not always carry the tournament key)
+    const after = await bg({ type: "KNOWN", entries: everyBestBall.map((c) => c.UserContestId) });
+    const missing = new Map((pay.missing ?? []).map((t) => [t.key, t]));
+    for (const t of after?.needLadders ?? []) if (t?.key && !missing.has(t.key)) missing.set(t.key, { key: t.key, name: t.name });
     const problems = [...errors, ...serverErrors];
     status.textContent = `Done — ${teamsTxt(bestBall.length)} on dkbbdb (${todo.length} new or updated).` +
-      (pay.tried ? `\nPayout tables: ${pay.read} of ${pay.tried} read.` : "\nPayout tables: all on dkbbdb.") +
+      (pay.tried ? `\nPayout tables: ${pay.read} of ${pay.tried} read.` : "") +
+      (missing.size ? "" : "\nPayout tables: all on dkbbdb.") +
       (pay.error ? `\nPayout tables: ${pay.error}` : "") +
       (problems.length ? `\n${problems.length} problem${problems.length === 1 ? "" : "s"}:\n${problems.slice(0, 4).join("\n")}` : "");
-    showMissing(pay.missing);
+    showMissing([...missing.values()]);
     const names = [...usernames];
     bg({ type: "SYNCED", usernames: names, teams: bestBall.length });
     if (names.length) showLink(`See ${names[0]} on the leaderboard ↗`, `https://dkbbdb.com/?u=${encodeURIComponent(names[0])}`);
