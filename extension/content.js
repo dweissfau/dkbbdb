@@ -259,6 +259,8 @@
       const a = document.createElement("a");
       a.href = `https://www.draftkings.com/draft/tournament/${t.key.toLowerCase()}`; a.target = "_blank";
       a.textContent = shortName(t.name) || t.key; a.style.cssText = "display:block;color:#3987e5;margin:2px 0";
+      // opened by script (not a plain link) so the tab may close itself once the table is read
+      a.addEventListener("click", (e) => { e.preventDefault(); window.open(a.href, "_blank"); });
       missingBox.appendChild(a);
     }
   }
