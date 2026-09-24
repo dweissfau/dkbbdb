@@ -167,9 +167,10 @@ td.user .pos { margin-right: 4px; }
 .profile .who .sub { color: var(--muted); font-size: 13.5px; margin-top: 3px; }
 .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
 .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; min-width: 0; }
-.tile .k { color: var(--muted); font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.tile .k { color: var(--muted); font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tile .v { font-size: 25px; font-weight: 700; line-height: 1.3; font-variant-numeric: tabular-nums; }
 .tile .d { color: var(--ink-2); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .of { font-size: 16px; font-weight: 500; } /* "36 of 150" — the count big, the field small */
 .tile.link { cursor: pointer; }
 .tile.link:hover, .tile.link:focus-visible { border-color: var(--accent); outline: none; }
 .profile .head { align-items: center; }
@@ -223,6 +224,7 @@ td.user .pos { margin-right: 4px; }
   .tile .v { font-size: 22px; }
   .tile .of { font-size: 14px; font-weight: 500; }
   .tile .good { color: #35c596; }
+  .tile .tg { color: var(--muted); font-size: 12px; font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* the chosen tournament under the count */
   .tiles { margin-bottom: 12px; }
 
   /* panel head: full-width segmented tabs + the funnel button; the count line goes */
