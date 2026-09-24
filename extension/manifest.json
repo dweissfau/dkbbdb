@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Best Ball Portfolio Sync for dkbbdb",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Sends your own best ball drafts from your DraftKings contests page to dkbbdb.com. Not affiliated with DraftKings.",
   "background": {
     "service_worker": "background.js"

@@ -29,11 +29,11 @@
     return out.join("\n…\n");
   }
   const looksLikeTable = (t) => /round\s*[2-9]|advance|finals?/i.test(t) && /\$\s?\d/.test(t);
-  // the page's own details tab, if it has one — a plain click, as the user would
+  // the page's own "Contest Details" link (its pop-up holds the PRIZE PAYOUTS table) — a plain click, as the user would
   function openDetails() {
     for (const el of document.querySelectorAll("a, button, li, [role=tab], span, div")) {
       const s = (el.textContent ?? "").trim();
-      if (/^(tournament|contest) details$/i.test(s) && el.children.length <= 2 && el.offsetParent !== null) { el.click(); return true; }
+      if (/^contest details$/i.test(s) && el.children.length <= 2 && el.offsetParent !== null) { el.click(); return true; }
     }
     return false;
   }
@@ -58,8 +58,8 @@
     const r = await bg({ type: "TOURNAMENTS", tournaments: [{ key: key.toUpperCase(), name, sources: [{ url: `dom:/draft/tournament/${key.toLowerCase()}`, status: 200, body }] }] });
     const got = r?.tournaments?.[key.toUpperCase()]?.ladder;
     toast(!r?.ok ? `dkbbdb: could not send the payout table (${r?.error ?? "unknown error"})`
-      : got ? `dkbbdb: payout table read — advance to round 2 = $${got["2"]}`
-      : looksLikeTable(text) ? "dkbbdb: payout text sent for a closer look" : "dkbbdb: page sent — open the Tournament Details tab to show the payout table");
+      : got ? `dkbbdb: payout table read — reaching round 2 is worth at least $${got["2"]}`
+      : looksLikeTable(text) ? "dkbbdb: payout text sent for a closer look" : "dkbbdb: page sent — click Contest Details to show the payout table");
   }
   // whenever the page changes (a tab opened, the table rendered), send again once it looks like a payout table
   function watch() {
@@ -73,7 +73,8 @@
     const n = pageText().length, settled = n === last; last = n;
     if (!settled && ++tries < 30) return setTimeout(tick, 1000);
     openDetails();
-    setTimeout(async () => { await send(); watch(); }, 2500);
+    // the pop-up can take a moment (or a second click) to render its table
+    setTimeout(async () => { if (!looksLikeTable(pageText())) openDetails(); await new Promise((r) => setTimeout(r, 2000)); await send(); watch(); }, 2500);
   };
   setTimeout(tick, 1500);
 })();
