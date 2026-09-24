@@ -121,7 +121,8 @@
     const parts = [];
     const sc = /<script\b[^>]*>([\s\S]*?)<\/script>/gi; let m;
     while ((m = sc.exec(body)) && parts.join("").length < 160000) { const t = m[1]; if (t && HOT.test(t) && !COLD.test(t)) parts.push(t.slice(0, 80000)); }
-    const text = body.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/&nbsp;|&#160;/g, " ").replace(/\s+/g, " ");
+    let text = body.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/&nbsp;|&#160;/g, " ").replace(/\s+/g, " ");
+    { const i = text.search(/contest details|tournament details|payouts?\b/i); if (i > 0) text = text.slice(i); } // from the contest's heading on, never the site header (account balance…)
     const seen = new Set(), win = []; const re = new RegExp(HOT.source + "|\\$\\s?\\d", "gi");
     while ((m = re.exec(text)) && win.join("").length < 30000) {
       const from = Math.max(0, m.index - 400), to = Math.min(text.length, m.index + 400), w = text.slice(from, to), k = w.slice(0, 60);
