@@ -21,7 +21,7 @@ HOW IT WORKS
 Sync again whenever you draft new teams. Drafts that are already on dkbbdb are never read twice.
 
 WHAT IT READS
-Only your own paid, season-long best ball entries and each one's draft board (the 12 usernames in the league and who drafted whom), and only when you click Sync.
+Only your own paid, season-long best ball entries, each one's draft board (the 12 usernames in the league and who drafted whom), and the payout table of each tournament you are in — and only when you click Sync.
 
 WHAT IT NEVER TOUCHES
 Your DraftKings password, cookies, email, balance or payment details. It does nothing on any other page or site.

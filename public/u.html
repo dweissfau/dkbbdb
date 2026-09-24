@@ -147,7 +147,10 @@
     const ranked = S.advancing + S.out, tiles = [
       ["Advancing", `<span class="good">${S.advancing.toLocaleString()}</span><span class="of"> of ${S.teams.toLocaleString()}</span>${tg}`,
         ranked ? "" : scopeName ? "no league places on these teams yet" : "no league places yet", "t-adv"],
-      ["Entry fees", money(S.buyIn) + tg, ranked ? `${money(S.advBuyIn)} on advancing teams` : "", "t-fees"]];
+      // Winning = the guaranteed prizes of the teams inside the cut line (next round's minimum), plus anything already
+      // credited. A tournament whose payout table is not on file yet shows up in the detail, not in the total.
+      ["Winning", `<span class="good">${money(S.winning)}</span>${tg}`,
+        S.winUnknown ? `payout table missing for ${plural(S.winUnknown, "advancing team")} · sync again` : S.winTeams ? `${plural(S.winTeams, "team")} inside the money` : ranked ? "no team inside the cut line" : "", "t-fees"]];
     $("tiles").innerHTML = tiles.map(([k, v, d, cls]) => `<div class="tile ${cls}"><div class="k">${esc(k)}${d ? `<span class="d"> · ${esc(d)}</span>` : ""}</div><div class="v">${v}</div></div>`).join("");
   }
 

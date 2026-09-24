@@ -127,3 +127,27 @@ create table if not exists board_cache (
   ms            int,
   body          jsonb not null
 );
+
+-- Payout ladders per tournament (lib/payouts.js): the guaranteed prize for REACHING each round, e.g.
+-- { "2": 30, "3": 100, "4": 1000 } — what a team inside the cut line is sure to win if it holds. The profile page's
+-- "Winning" stat adds those up. Read from what the extension captures on a sync (DraftKings shows the table only
+-- to a signed-in user), stored once per tournament for everyone in it.
+create table if not exists tournaments (
+  tournament_key  text primary key,
+  name            text,
+  ladder          jsonb,
+  top_prize       numeric,
+  source          text,                 -- which capture the ladder was read from ("manual" = set by hand)
+  updated_at      timestamptz not null default now()
+);
+-- the raw material the ladder is parsed from (payout-related excerpts only), latest per tournament and source
+create table if not exists tournament_captures (
+  tournament_key  text not null,
+  source          text not null,        -- the URL fetched, or dom:<path> for a page the user opened
+  status          int,
+  body            text,
+  sender          text,
+  at              timestamptz not null default now(),
+  primary key (tournament_key, source)
+);
+create index if not exists tournament_captures_sender_at on tournament_captures (sender, at desc);

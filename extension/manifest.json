@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Best Ball Portfolio Sync for dkbbdb",
-  "version": "1.0.6",
+  "version": "1.1.0",
   "description": "Sends your own best ball drafts from your DraftKings contests page to dkbbdb.com. Not affiliated with DraftKings.",
   "background": {
     "service_worker": "background.js"
@@ -26,10 +26,20 @@
         "content.js"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.draftkings.com/draft/tournament/*"
+      ],
+      "js": [
+        "tournament.js"
+      ],
+      "run_at": "document_idle"
     }
   ],
   "host_permissions": [
     "https://api.draftkings.com/*",
+    "https://www.draftkings.com/*",
     "https://dkbbdb.com/*"
   ],
   "icons": {

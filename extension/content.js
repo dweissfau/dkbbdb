@@ -3,6 +3,8 @@
 //   2. For every Best Ball entry dkbbdb does not have yet, fetches its draft board (draftStatus) with your
 //      signed-in DraftKings session: the same request the site itself makes.
 //   3. Uploads the result to dkbbdb.com (no account: your teams join the leaderboard under your DraftKings username).
+//   4. For each tournament whose payout table dkbbdb does not have yet, fetches the tournament's own DraftKings
+//      pages and sends only their payout-related parts (the guaranteed prize per round → the "Winning" stat).
 // No credentials are read or stored. One draft board lists all 12 teams, so nothing else is requested.
 
 (() => {
@@ -106,6 +108,61 @@
     if (!r?.ok) return { error: `HTTP ${r?.status ?? 0}` };
     try { return { json: JSON.parse(r.body) }; } catch { return { error: "response was not JSON" }; }
   };
+
+  // ---------- payout tables ----------
+  // A tournament's pages, reduced to what concerns payouts: JSON as it is (capped), HTML as the <script> blocks
+  // that mention payouts plus windows of the page text around "advance / round / prize / $". A page that bounced
+  // to the sign-in screen is dropped. Nothing about the account (balance, email…) is kept.
+  const HOT = /advance|round\s*\d|payout|prize|guarantee|finals?/i, COLD = /password|balance|email|deposit|withdraw/i;
+  function excerptOf(r) {
+    if (!r?.ok || !r.body || /myaccount\.draftkings\.com|\/auth\/(signup|login)/i.test(r.url ?? "")) return null;
+    const body = String(r.body);
+    if (/^\s*[[{]/.test(body)) return body.slice(0, 200000);
+    const parts = [];
+    const sc = /<script\b[^>]*>([\s\S]*?)<\/script>/gi; let m;
+    while ((m = sc.exec(body)) && parts.join("").length < 160000) { const t = m[1]; if (t && HOT.test(t) && !COLD.test(t)) parts.push(t.slice(0, 80000)); }
+    const text = body.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/&nbsp;|&#160;/g, " ").replace(/\s+/g, " ");
+    const seen = new Set(), win = []; const re = new RegExp(HOT.source + "|\\$\\s?\\d", "gi");
+    while ((m = re.exec(text)) && win.join("").length < 30000) {
+      const from = Math.max(0, m.index - 400), to = Math.min(text.length, m.index + 400), w = text.slice(from, to), k = w.slice(0, 60);
+      if (!seen.has(k)) { seen.add(k); win.push(w); }
+      re.lastIndex = to;
+    }
+    if (win.length) parts.push(win.join("\n…\n"));
+    return parts.length ? parts.join("\n----\n") : null;
+  }
+  // the pages tried for one tournament (its key and the tournament-wide "mega" contest id)
+  const tournamentUrls = (key, mega) => [
+    [`https://www.draftkings.com/draft/tournament/${key.toLowerCase()}`, "text/html"],
+    [`https://api.draftkings.com/contests/v1/tournaments/${key}?format=json`, "application/json"],
+    [`https://api.draftkings.com/bestball/v1/tournaments/${key}?format=json`, "application/json"],
+    ...(mega ? [[`https://api.draftkings.com/contests/v1/contests/${mega}?format=json`, "application/json"],
+      [`https://api.draftkings.com/contests/v1/megacontests/${mega}?format=json`, "application/json"],
+      [`https://www.draftkings.com/contest/gamecenter/${mega}`, "text/html"]] : []),
+  ];
+  // → { sent, read } — tournaments captured, and those whose ladder dkbbdb could read straight away
+  async function capturePayouts(contests, haveLadders, say) {
+    const todo = new Map();
+    for (const c of contests) {
+      const key = String(c.TournamentKey ?? "").toUpperCase();
+      if (/^[0-9A-F]{32}$/.test(key) && !haveLadders.has(key) && !todo.has(key)) todo.set(key, { key, name: c.ContestName ?? null, mega: c.MegaContestId ?? null });
+    }
+    let sent = 0, read = 0, i = 0;
+    for (const t of todo.values()) {
+      say(`Reading payout tables… (${++i} of ${todo.size})`);
+      const sources = [];
+      for (const [url, accept] of tournamentUrls(t.key, t.mega)) {
+        const r = await bg({ type: "FETCH_DK", url, accept });
+        const body = excerptOf(r);
+        if (body) sources.push({ url, status: r.status, body });
+        await sleep(150);
+      }
+      if (!sources.length) continue;
+      const r = await bg({ type: "TOURNAMENTS", tournaments: [{ key: t.key, name: t.name, sources }] });
+      if (r?.ok) { sent++; if (r.tournaments?.[t.key]?.ladder) read++; }
+    }
+    return { sent, read, tried: todo.size };
+  }
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   // raw draftStatus → the compact upload form (keep in step with dkbbdb lib/ingest.js compactStatus)
@@ -226,8 +283,12 @@
       serverErrors.push(...(r.errors ?? []));
       for (const n of r.usernames ?? []) usernames.add(n);
     }
+    // payout tables for tournaments dkbbdb has none for yet (the "Winning" stat)
+    let pay = { sent: 0, read: 0, tried: 0 };
+    try { pay = await capturePayouts(bestBall, new Set((known.ladders ?? []).map((k) => String(k).toUpperCase())), (t) => { status.textContent = t; }); } catch { /* never blocks a sync */ }
     const problems = [...errors, ...serverErrors];
     status.textContent = `Done — ${teamsTxt(bestBall.length)} on dkbbdb (${todo.length} new or updated).` +
+      (pay.tried ? `\nPayout tables: ${pay.read} of ${pay.tried} read${pay.sent > pay.read ? `, ${pay.sent - pay.read} sent for a closer look` : ""}.` : "") +
       (problems.length ? `\n${problems.length} problem${problems.length === 1 ? "" : "s"}:\n${problems.slice(0, 4).join("\n")}` : "");
     const names = [...usernames];
     bg({ type: "SYNCED", usernames: names, teams: bestBall.length });
