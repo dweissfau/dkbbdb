@@ -165,14 +165,15 @@ td.user .pos { margin-right: 4px; }
 .profile .who { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 6px 0 16px; }
 .profile h1 { font-size: 30px; margin: 0; letter-spacing: -.5px; line-height: 1.15; overflow-wrap: anywhere; }
 .profile .who .sub { color: var(--muted); font-size: 13.5px; margin-top: 3px; }
-.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
-.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; min-width: 0; }
-.tile .k { color: var(--muted); font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tile .v { font-size: 25px; font-weight: 700; line-height: 1.3; font-variant-numeric: tabular-nums; }
-.tile .d { color: var(--ink-2); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tile .of { font-size: 16px; font-weight: 500; } /* "36 of 150" — the count big, the field small */
-.tile.link { cursor: pointer; }
-.tile.link:hover, .tile.link:focus-visible { border-color: var(--accent); outline: none; }
+/* the two stats. Desktop: a plain strip under the header — the number, then "label · detail" quietly under it, no boxes.
+   Phone (below): two small boxes, label above the number, no detail */
+.tiles { display: flex; gap: 40px; margin: 0 0 18px; }
+.tile { display: flex; flex-direction: column; min-width: 0; }
+.tile .v { order: 0; font-size: 30px; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; letter-spacing: -.3px; }
+.tile .k { order: 1; color: var(--muted); font-size: 13px; font-weight: 500; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .k .d { font-weight: 400; }
+.tile .of { font-size: 17px; font-weight: 500; } /* "36 of 150" — the count big, the field small */
+.tile .good { color: #35c596; }
 .profile .head { align-items: center; }
 .profile .head select { padding: 5px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--page); color: var(--ink); font: inherit; font-size: 13px; max-width: 300px; min-width: 0; }
 .profile .head .find { flex: 0 1 230px; }
@@ -184,10 +185,6 @@ td.user .pos { margin-right: 4px; }
 @media (max-width: 640px) {
   .profile .who { margin: 2px 0 12px; }
   .profile h1 { font-size: 24px; }
-  .tiles { grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
-  .tile { padding: 9px 10px; }
-  .tile .v { font-size: 20px; }
-  .tile .d { font-size: 12px; }
   .profile .head select, .profile .head .find { flex: 1 1 100%; max-width: none; }
   .profile .head .find input { font-size: 16px; padding: 7px 10px; }
   .profile .head select { font-size: 16px; padding: 7px 10px; }
@@ -218,12 +215,12 @@ td.user .pos { margin-right: 4px; }
   /* header: name, "193 teams · NFL week 3", a green Live; two tiles, no sub-lines; the bar without a legend */
   .profile .who { align-items: center; margin: 2px 0 12px; }
   .profile .who .sub { font-size: 13px; }
-  .tiles { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
-  .tile.t-teams, .tile.t-best, .tile .d { display: none; }
-  .tile.t-adv { order: 1; } .tile.t-fees { order: 2; }
-  .tile .v { font-size: 22px; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 9px 10px; }
+  .tile .k { order: 0; font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; margin: 0; }
+  .tile .k .d { display: none; }
+  .tile .v { order: 1; font-size: 22px; line-height: 1.3; letter-spacing: 0; }
   .tile .of { font-size: 14px; font-weight: 500; }
-  .tile .good { color: #35c596; }
   .tile .tg { color: var(--muted); font-size: 12px; font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* the chosen tournament under the count */
   .tiles { margin-bottom: 12px; }
 
@@ -271,6 +268,25 @@ td.user .pos { margin-right: 4px; }
   .profile .chip.wait { color: var(--muted); }
   .profile td.empty { grid-column: 1 / -1; display: block; }
   .profile .more { padding-bottom: 8px; }
+}
+
+/* profile page on a desktop: the toolbar is tabs · Advancing-only pill · tournament · player search … sort menu;
+   the team rows are two lines like the phone's (entry fee and draft date under the tournament name) */
+@media (min-width: 641px) {
+  .profile .head { gap: 10px; }
+  .profile .head #tabs { order: 0; } .profile .head #advWrap { order: 1; } .profile .head #fT { order: 2; }
+  .profile .head #fP, .profile .head #fQ { order: 3; } .profile .head #posPills { order: 4; }
+  .profile .head .spacer { order: 5; } .profile .head .note { order: 6; } .profile .head .sortwrap { order: 7; }
+  .profile .head #advWrap { border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+  .profile .head #advWrap input { display: none; }
+  .profile .head #advWrap:hover { color: var(--ink); }
+  .profile .head #advWrap.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .profile .head .sortwrap { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12.5px; }
+  .profile .head .sortwrap select { max-width: 160px; }
+  .profile .panel.xp .sortwrap { display: none; }
+  .profile td.contest { color: var(--ink); font-weight: 500; }
+  .profile td.contest .under { margin-top: 1px; }
+  .profile td { padding: 8px 10px; }
 }
 
 /* player suggestions: badge · logo · name on the left, team count on the right */
