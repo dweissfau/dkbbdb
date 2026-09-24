@@ -132,21 +132,24 @@
     history.replaceState(null, "", "/u/" + encodeURIComponent(who) + (q ? "?" + q : ""));
   }
 
-  function renderHeader(P, s) {
+  function renderHeader(P, s, f) {
     $("name").textContent = P.user; document.title = `${P.user} · dkbbdb`;
     $("sub").innerHTML = `<span class="lg">DraftKings best ball · </span>${plural(P.teams, "team")} · NFL week ${data.week}`;
     // tiles: [label, value html, sub-line, entry id, css class]. A phone shows only Advancing and Entry fees, no sub-lines.
-    // With a tournament chosen, Advancing counts that tournament's teams only (stats.field* = the user's teams in it)
-    const inT = F.t && s ? { teams: s.field, advancing: s.fieldAdvancing, ranked: s.fieldRanked } : null;
-    const adv = inT ?? { teams: P.teams, advancing: P.advancing, ranked: P.advancing + P.out };
+    // Advancing follows the filters: a tournament narrows it to the user's teams in it (stats.field*), chosen players
+    // (Teams tab) to the teams that have them within that (stats.count/advancing/ranked)
+    const players = F.tab === "teams" && f ? f.p : [];
+    const scope = players.length ? { teams: s.count, advancing: s.advancing, ranked: s.ranked } : F.t && s ? { teams: s.field, advancing: s.fieldAdvancing, ranked: s.fieldRanked } : null;
+    const scopeName = [F.t ? shortName(F.t) : "", ...players.map((x) => x.name)].filter(Boolean).join(" · ");
+    const adv = scope ?? { teams: P.teams, advancing: P.advancing, ranked: P.advancing + P.out };
     const ranked = P.advancing + P.out, tiles = [
       ["Teams", P.teams.toLocaleString(), `in ${plural(P.tournaments.length, "tournament")}`, null, "t-teams"],
       ["Entry fees", money(P.buyIn), ranked ? `${money(P.advBuyIn)} on advancing teams` : "", null, "t-fees"],
-      // with a tournament: "36 of 150" on every screen; desktop names it in the label, a phone (no sub-lines,
+      // filtered: "36 of 150" on every screen; desktop names the scope in the label, a phone (no sub-lines,
       // half-width tile) gets it as a small line under the count
-      [inT ? `<span class="lg">Advancing · ${esc(shortName(F.t))}</span><span class="sm">Advancing</span>` : "Advancing",
-        `<span class="good">${adv.advancing.toLocaleString()}</span><span class="of${inT ? "" : " sm"}"> of ${adv.teams.toLocaleString()}</span>${inT ? `<div class="tg sm">${esc(shortName(F.t))}</div>` : ""}`,
-        adv.ranked ? `${pct(adv.advancing, adv.ranked)} of ${plural(adv.ranked, "team")} with a league place` : inT ? "no league places in this tournament yet" : "no league places yet", null, "t-adv"],
+      [scope ? `<span class="lg" title="${esc(scopeName)}">Advancing · ${esc(scopeName)}</span><span class="sm">Advancing</span>` : "Advancing",
+        `<span class="good">${adv.advancing.toLocaleString()}</span><span class="of${scope ? "" : " sm"}"> of ${adv.teams.toLocaleString()}</span>${scope ? `<div class="tg sm" title="${esc(scopeName)}">${esc(scopeName)}</div>` : ""}`,
+        adv.ranked ? `${pct(adv.advancing, adv.ranked)} of ${plural(adv.ranked, "team")} with a league place` : scope ? "no league places on these teams yet" : "no league places yet", null, "t-adv"],
       ["Best team", P.best ? pts(P.best.points) : "—", P.best ? `${P.best.rank ?? "—"} of ${P.best.entrants ?? "—"} · ${P.best.contest}` : "", P.best?.id, "t-best"]];
     $("tiles").innerHTML = tiles.map(([k, v, d, id, cls]) => `<div class="tile ${cls}${id ? " link" : ""}"${id ? ` data-id="${esc(id)}" tabindex="0" title="Open this team's league"` : ""}><div class="k">${k}</div><div class="v">${v}</div><div class="d" title="${esc(d)}">${esc(d)}</div></div>`).join("");
   }
@@ -155,7 +158,7 @@
     const cols = COLS[F.tab];
     if (!data?.live) { $("rows").innerHTML = `<tr><td class="empty">Scores are unavailable right now — try again in a minute.</td></tr>`; return; }
     const P = data.profile, f = data.filter, s = data.stats;
-    renderHeader(P, s);
+    renderHeader(P, s, f);
     if (P.teams && (sp.get("me") === "1" || isMe())) { remember(P.user); $("forget").hidden = false; } // typed on the home page, or already this browser's own page
     if (!P.teams) { // nothing synced under this name
       $("tiles").innerHTML = ""; $("sub").textContent = "";
