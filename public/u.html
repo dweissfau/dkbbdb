@@ -105,9 +105,12 @@
 
   // ticked teams: the boxes on the Teams rows. T.ids = entry ids (strings), T.mode = "" (just marks) | "only" (both tabs
   // show only those teams) | "hide" (both tabs leave them out). Kept per account in this browser, not in the address.
+  // Only on the owner's own page (kknox20) — every other account, now or later, gets the plain page with no tick column, no pills.
+  const TICKS = who.toLowerCase() === "kknox20";
+  if (TICKS) document.body.classList.add("ticks");
   const TICK_KEY = "dkbbdb-ticks:" + who.toLowerCase();
   const T = { ids: new Set(), mode: "" };
-  try { const s = JSON.parse(localStorage.getItem(TICK_KEY) ?? "null"); if (s && Array.isArray(s.ids)) { T.ids = new Set(s.ids.map(String)); T.mode = ["only", "hide"].includes(s.mode) && T.ids.size ? s.mode : ""; } } catch { /* private window */ }
+  if (TICKS) try { const s = JSON.parse(localStorage.getItem(TICK_KEY) ?? "null"); if (s && Array.isArray(s.ids)) { T.ids = new Set(s.ids.map(String)); T.mode = ["only", "hide"].includes(s.mode) && T.ids.size ? s.mode : ""; } } catch { /* private window */ }
   const saveTicks = () => { try { localStorage.setItem(TICK_KEY, JSON.stringify({ ids: [...T.ids], mode: T.mode })); } catch { /* private window */ } };
   const tickBox = (id) => `<input type="checkbox" class="tick" data-tick="${esc(id)}"${T.ids.has(String(id)) ? " checked" : ""} aria-label="Tick this team">`;
   function tick(ids, on) {
@@ -126,7 +129,7 @@
   const shortName = (c) => String(c ?? "").replace(/\s*\[[^\]]*\]/g, "").trim(); // phone: "$20M Millionaire [$3M to 1st]" → "$20M Millionaire"
   // columns per tab: [sort key | null, label, css class, cell html]
   const COLS = {
-    teams: [[null, `<input type="checkbox" class="tick" id="tickAll" aria-label="Tick every team in view" title="Tick / untick every team the filters leave">`, "tick", (t) => tickBox(t.id)],
+    teams: [...(TICKS ? [[null, `<input type="checkbox" class="tick" id="tickAll" aria-label="Tick every team in view" title="Tick / untick every team the filters leave">`, "tick", (t) => tickBox(t.id)]] : []),
       [null, "", "rk num", (t) => t.n],
       ["contest", "Tournament", "contest", (t) => `<span class="lg">${esc(t.contest)}</span><span class="sm">${esc(shortName(t.contest))}</span><div class="under"><span class="sm">${t.rank == null ? "no place yet" : `<b>${t.rank}</b>/${t.entrants}`} · </span>${money(t.buyIn)} · ${day(t.date)}</div>`],
       ["rank", L("League place", "Place"), "col-place", place], ["gap", "Cut line", "gap", gapChip],
@@ -215,9 +218,9 @@
     const filtered = !!(F.t || np || T.mode || (F.tab === "teams" && F.adv === "1") || (F.tab === "exposure" && (F.pos || nq)));
     $("filterBtn").classList.toggle("on", filtered);
     // ticked teams: the mode pills appear once anything is ticked; one chip says how many and what the mode does
-    $("tickPills").hidden = !T.ids.size;
+    $("tickPills").hidden = !TICKS || !T.ids.size;
     for (const b of $("tickPills").children) b.classList.toggle("on", b.dataset.tickMode === T.mode);
-    if (T.ids.size) chips.push(`<span class="tag" title="${T.mode === "only" ? "both tabs show only the ticked teams" : T.mode === "hide" ? "both tabs leave the ticked teams out" : "ticks are just marks until you pick “Only ticked” or “Hide ticked”"}">${plural(T.ids.size, "team")} ticked${T.mode === "only" ? " · only these" : T.mode === "hide" ? " · hidden" : ""}<button data-clear="ticks" aria-label="Untick every team">✕</button></span>`);
+    if (TICKS && T.ids.size) chips.push(`<span class="tag" title="${T.mode === "only" ? "both tabs show only the ticked teams" : T.mode === "hide" ? "both tabs leave the ticked teams out" : "ticks are just marks until you pick “Only ticked” or “Hide ticked”"}">${plural(T.ids.size, "team")} ticked${T.mode === "only" ? " · only these" : T.mode === "hide" ? " · hidden" : ""}<button data-clear="ticks" aria-label="Untick every team">✕</button></span>`);
     if (F.t) chips.push(`<span class="tag sm">${esc(shortName(F.t))}<button data-clear="t" aria-label="All tournaments">✕</button></span>`);
     if (F.tab === "teams" && F.adv === "1") chips.push(`<span class="tag sm">Advancing only<button data-clear="adv" aria-label="Every team">✕</button></span>`);
     if (F.tab === "exposure" && F.pos) chips.push(`<span class="tag sm">${posTag(F.pos)}only<button data-clear="pos" aria-label="Every position">✕</button></span>`);

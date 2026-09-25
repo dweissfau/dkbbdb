@@ -74,6 +74,16 @@ ok("unticking all from the header clears everything", rows().length === 100 && $
 click(rows()[0].querySelector("td.contest")); await settle();
 ok("clicking the row itself still opens the team pop-up", !!d.querySelector("iframe.teamframe"));
 ok("no script errors", errors.length === 0, errors.slice(0, 3).join(" | "));
+// every other account (now or signed up later): the plain page — no tick column, no pills, a stored tick list is ignored
+{
+  const other = "fleaflick";
+  const dom2 = new JSDOM(html, { runScripts: "dangerously", url: "https://dkbbdb.com/u/" + other, pretendToBeVisual: true, beforeParse(w2) {
+    w2.scrollTo = () => {}; w2.fetch = w.fetch; w2.addEventListener("error", (e) => errors.push("other: " + e.message));
+    try { w2.localStorage.setItem("dkbbdb-ticks:" + other, JSON.stringify({ ids: ["1"], mode: "only" })); } catch { /* fine */ } } });
+  const d2 = dom2.window.document; await settle(); await settle();
+  const rows2 = [...d2.querySelectorAll("#rows tr[tabindex]")];
+  ok("another account's page: no tick boxes, no pills, stored ticks ignored, every team shown", rows2.length === 10 && !d2.querySelector("input.tick") && !d2.getElementById("tickAll") && d2.getElementById("tickPills").hidden && !d2.body.classList.contains("ticks") && /10 teams/.test(text(d2.getElementById("sub"))) && errors.length === 0, `${rows2.length} rows · ${text(d2.getElementById("sub"))}`);
+}
 await db.end();
 console.log(checks.every(Boolean) ? `\nall ${checks.length} checks pass` : `\n${checks.filter((c) => !c).length} FAILED`);
 process.exit(checks.every(Boolean) ? 0 : 1);

@@ -265,12 +265,13 @@ td.user .pos { margin-right: 4px; }
   .profile tbody td { display: block; padding: 0; border: 0; }
   .profile td.rk, .profile td.col-buyin, .profile td.col-date, .profile td.col-place, .profile td.col-left, .profile td.col-own { display: none; }
   .profile td.contest, .profile td.user { grid-column: 1; grid-row: 1 / span 2; white-space: normal; color: var(--ink); font-weight: 500; font-size: 15px; line-height: 1.3; }
-  /* Teams tab: the tick box is a slim first column; the tournament and the numbers shift one column right */
-  .profile #panel:not(.xp) tbody tr { grid-template-columns: auto 1fr auto; }
-  .profile td.tick { grid-column: 1; grid-row: 1 / span 2; align-self: center; margin-right: -2px; }
-  .profile td.tick .tick { width: 20px; height: 20px; }
-  .profile #panel:not(.xp) td.contest { grid-column: 2; }
-  .profile #panel:not(.xp) td.points, .profile #panel:not(.xp) td.gap { grid-column: 3; }
+  /* Teams tab on a page with tick boxes (body.ticks — the owner's page only): the box is a slim first column; the
+     tournament and the numbers shift one column right. Every other page keeps the two-column rows above. */
+  body.ticks .profile #panel:not(.xp) tbody tr { grid-template-columns: auto 1fr auto; }
+  body.ticks .profile td.tick { grid-column: 1; grid-row: 1 / span 2; align-self: center; margin-right: -2px; }
+  body.ticks .profile td.tick .tick { width: 20px; height: 20px; }
+  body.ticks .profile #panel:not(.xp) td.contest { grid-column: 2; }
+  body.ticks .profile #panel:not(.xp) td.points, body.ticks .profile #panel:not(.xp) td.gap { grid-column: 3; }
   .profile td.contest .under, .profile td.user .under { font-size: 12.5px; margin-top: 3px; }
   .profile td.contest .under b { color: var(--ink); }
   .profile td.points { grid-column: 2; grid-row: 1; font-size: 16px; text-align: right; }
