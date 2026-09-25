@@ -48,6 +48,10 @@
           <button class="pill mini on" data-pos="">All</button><button class="pill mini" data-pos="QB">QB</button><button class="pill mini" data-pos="RB">RB</button><button class="pill mini" data-pos="WR">WR</button><button class="pill mini" data-pos="TE">TE</button>
         </div>
         <label class="check" id="advWrap"><input type="checkbox" id="advOnly"> Advancing only</label>
+        <!-- ticked teams (the boxes on the Teams rows): shown once anything is ticked, on both tabs -->
+        <div class="pills" id="tickPills" hidden title="Tick teams on the Teams tab, then see only those teams — or everything but them — on both tabs">
+          <button class="pill mini on" data-tick-mode="">All teams</button><button class="pill mini" data-tick-mode="only">Only ticked</button><button class="pill mini" data-tick-mode="hide">Hide ticked</button>
+        </div>
         <label class="sortwrap" id="sortWrap">Sort by <select id="fS" aria-label="Sort by"></select></label>
       </div>
       <div class="spacer"></div>
@@ -99,6 +103,21 @@
     pos: sp.get("pos") ?? "", q: sp.get("q") ?? "", sort: sp.get("sort") ?? "", dir: sp.get("dir") ?? "", team: sp.get("team") ?? "" };
   let data = null, rows = [], shown = PAGE;
 
+  // ticked teams: the boxes on the Teams rows. T.ids = entry ids (strings), T.mode = "" (just marks) | "only" (both tabs
+  // show only those teams) | "hide" (both tabs leave them out). Kept per account in this browser, not in the address.
+  const TICK_KEY = "dkbbdb-ticks:" + who.toLowerCase();
+  const T = { ids: new Set(), mode: "" };
+  try { const s = JSON.parse(localStorage.getItem(TICK_KEY) ?? "null"); if (s && Array.isArray(s.ids)) { T.ids = new Set(s.ids.map(String)); T.mode = ["only", "hide"].includes(s.mode) && T.ids.size ? s.mode : ""; } } catch { /* private window */ }
+  const saveTicks = () => { try { localStorage.setItem(TICK_KEY, JSON.stringify({ ids: [...T.ids], mode: T.mode })); } catch { /* private window */ } };
+  const tickBox = (id) => `<input type="checkbox" class="tick" data-tick="${esc(id)}"${T.ids.has(String(id)) ? " checked" : ""} aria-label="Tick this team">`;
+  function tick(ids, on) {
+    for (const id of ids) { if (on) T.ids.add(String(id)); else T.ids.delete(String(id)); }
+    if (!T.ids.size) T.mode = "";
+    saveTicks();
+    if (T.mode) load(true); else render(); // the filter changed → ask the server; otherwise just redraw the boxes + chip
+  }
+  function setTickMode(mode) { T.mode = T.ids.size ? mode : ""; saveTicks(); load(); }
+
   const gapChip = (t) => t.gap == null ? (t.adv ? `<span class="chip">Advancing</span>` : t.adv === false ? `<span class="chip out">Out</span>` : `<span class="chip wait">Not started</span>`)
     : t.adv ? `<span class="chip" title="points ahead of the best team outside the cut line">Advancing +${pts(t.gap)}</span>`
     : `<span class="chip out" title="points behind the last team inside the cut line">Out by ${pts(-t.gap)}</span>`;
@@ -107,7 +126,8 @@
   const shortName = (c) => String(c ?? "").replace(/\s*\[[^\]]*\]/g, "").trim(); // phone: "$20M Millionaire [$3M to 1st]" → "$20M Millionaire"
   // columns per tab: [sort key | null, label, css class, cell html]
   const COLS = {
-    teams: [[null, "", "rk num", (t) => t.n],
+    teams: [[null, `<input type="checkbox" class="tick" id="tickAll" aria-label="Tick every team in view" title="Tick / untick every team the filters leave">`, "tick", (t) => tickBox(t.id)],
+      [null, "", "rk num", (t) => t.n],
       ["contest", "Tournament", "contest", (t) => `<span class="lg">${esc(t.contest)}</span><span class="sm">${esc(shortName(t.contest))}</span><div class="under"><span class="sm">${t.rank == null ? "no place yet" : `<b>${t.rank}</b>/${t.entrants}`} · </span>${money(t.buyIn)} · ${day(t.date)}</div>`],
       ["rank", L("League place", "Place"), "col-place", place], ["gap", "Cut line", "gap", gapChip],
       ["left", "Left", "num col-left", (t) => t.left ?? "—"], ["points", "Points", "num points", (t) => `<b>${pts(t.points)}</b>`]],
@@ -124,8 +144,11 @@
 
   const params = (extra) => { const q = { view: F.tab === "exposure" ? "players" : "teams", u: who, t: F.t, sort: F.sort, dir: F.dir, ...extra };
     if (F.tab === "teams") { q.p = F.p; q.adv = F.adv; } else { q.pos = F.pos; q.q = F.q.trim(); }
+    if (T.mode && T.ids.size) q[T.mode] = [...T.ids].join(",");
     return new URLSearchParams(Object.entries(q).filter(([, v]) => v !== "" && v != null)); };
-  const url = (offset, limit) => "/api/leaderboard?" + params({ offset, limit });
+  // a long ticked list goes as a POST body (the same fields) — an address has a length limit, a body does not
+  const req = (extra) => { const p = params(extra), s = p.toString();
+    return s.length > 1500 ? fetch("/api/leaderboard", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(Object.fromEntries(p)) }) : fetch("/api/leaderboard?" + s); };
   function pushState() {
     const q = new URLSearchParams(Object.entries(F).filter(([k, v]) => v && !(k === "tab" && v === "teams"))).toString();
     history.replaceState(null, "", "/u/" + encodeURIComponent(who) + (q ? "?" + q : ""));
@@ -136,7 +159,9 @@
     // the header line and both stats follow the filters: a tournament narrows them to the user's teams in it, chosen
     // players (Teams tab) to the teams that have them within that — `scope` from the API is that set's summary
     const players = F.tab === "teams" && f ? f.p : [];
-    const scopeName = [F.t ? shortName(F.t) : "", ...players.map((x) => x.name)].filter(Boolean).join(" · ");
+    const tk = f?.ticks ?? { only: 0, hide: 0 };
+    const tickName = T.mode === "only" && tk.only ? `${tk.only} ticked` : T.mode === "hide" && tk.hide ? `all but ${tk.hide} ticked` : "";
+    const scopeName = [tickName, F.t ? shortName(F.t) : "", ...players.map((x) => x.name)].filter(Boolean).join(" · ");
     const S = scopeName && sc ? sc : P;
     $("sub").innerHTML = `<span class="lg">DraftKings best ball · </span>` + (scopeName
       ? `<b>${S.teams.toLocaleString()}</b> of ${plural(P.teams, "team")}<span class="lg"> · ${esc(scopeName)}</span>`
@@ -187,8 +212,12 @@
     const chips = [];
     const np = F.tab === "teams" ? f.p.length : 0;
     const nq = F.tab === "exposure" ? F.q.trim() : "";
-    const filtered = !!(F.t || np || (F.tab === "teams" && F.adv === "1") || (F.tab === "exposure" && (F.pos || nq)));
+    const filtered = !!(F.t || np || T.mode || (F.tab === "teams" && F.adv === "1") || (F.tab === "exposure" && (F.pos || nq)));
     $("filterBtn").classList.toggle("on", filtered);
+    // ticked teams: the mode pills appear once anything is ticked; one chip says how many and what the mode does
+    $("tickPills").hidden = !T.ids.size;
+    for (const b of $("tickPills").children) b.classList.toggle("on", b.dataset.tickMode === T.mode);
+    if (T.ids.size) chips.push(`<span class="tag" title="${T.mode === "only" ? "both tabs show only the ticked teams" : T.mode === "hide" ? "both tabs leave the ticked teams out" : "ticks are just marks until you pick “Only ticked” or “Hide ticked”"}">${plural(T.ids.size, "team")} ticked${T.mode === "only" ? " · only these" : T.mode === "hide" ? " · hidden" : ""}<button data-clear="ticks" aria-label="Untick every team">✕</button></span>`);
     if (F.t) chips.push(`<span class="tag sm">${esc(shortName(F.t))}<button data-clear="t" aria-label="All tournaments">✕</button></span>`);
     if (F.tab === "teams" && F.adv === "1") chips.push(`<span class="tag sm">Advancing only<button data-clear="adv" aria-label="Every team">✕</button></span>`);
     if (F.tab === "exposure" && F.pos) chips.push(`<span class="tag sm">${posTag(F.pos)}only<button data-clear="pos" aria-label="Every position">✕</button></span>`);
@@ -202,11 +231,13 @@
 
     // the Teams tab's count is in the header line already; the Exposure tab's player count sits by the table
     $("count").textContent = F.tab === "teams" ? "" : nq && !data.total ? `nobody matching “${nq}”` : plural(data.total, "player");
-    const thClass = (cls) => cls.split(" ").filter((c) => c === "num" || c.startsWith("col-")).join(" ");
+    const thClass = (cls) => cls.split(" ").filter((c) => c === "num" || c === "tick" || c.startsWith("col-")).join(" ");
     $("thead").innerHTML = cols.map(([key, label, cls]) => `<th class="${thClass(cls)}${key ? " sortable" : ""}"${key ? ` data-sort="${key}" tabindex="0"` : ""}>${label}${key && data.sort === key ? `<span class="arrow">${data.dir === "asc" ? "▲" : "▼"}</span>` : ""}</th>`).join("");
-    const attr = (r) => F.tab === "teams" ? `data-id="${esc(r.id)}"` : `data-player="${r.id}"`;
+    const attr = (r) => F.tab === "teams" ? `data-id="${esc(r.id)}"${T.ids.has(String(r.id)) ? ' class="ticked"' : ""}` : `data-player="${r.id}"`;
     $("rows").innerHTML = rows.map((r) => `<tr ${attr(r)} tabindex="0">${cols.map(([, , cls, cell]) => `<td class="${cls}">${cell(r)}</td>`).join("")}</tr>`).join("")
       || `<tr><td colspan="${cols.length}" class="empty">Nothing matches.</td></tr>`;
+    const all = $("tickAll");
+    if (all) { const n = rows.filter((r) => T.ids.has(String(r.id))).length; all.checked = rows.length > 0 && n === rows.length; all.indeterminate = n > 0 && n < rows.length; }
     $("more").hidden = rows.length >= data.total;
     renderNote();
   }
@@ -220,9 +251,9 @@
     if (!keepShown) shown = PAGE;
     const mine = ++seq;
     try {
-      const d = await (await fetch(url(0, Math.min(200, shown)))).json();
+      const d = await (await req({ offset: 0, limit: Math.min(200, shown) })).json();
       const got = d.rows ?? [];
-      while (d.live && got.length < Math.min(shown, d.total)) got.push(...(await (await fetch(url(got.length, 200))).json()).rows);
+      while (d.live && got.length < Math.min(shown, d.total)) got.push(...(await (await req({ offset: got.length, limit: 200 })).json()).rows);
       if (mine !== seq) return;
       data = d; rows = got; render();
     } catch { if (!data) $("rows").innerHTML = `<tr><td class="empty">Could not load this page — check your connection.</td></tr>`; }
@@ -242,7 +273,16 @@
   $("active").addEventListener("click", (e) => {
     const b = e.target.closest("[data-clear]"); if (!b) return;
     if (b.dataset.clear === "p") set({ p: pids().filter((id) => id !== b.dataset.id).join(",") });
+    else if (b.dataset.clear === "ticks") tick([...T.ids], false);
     else set({ [b.dataset.clear]: "" });
+  });
+  $("tickPills").addEventListener("click", (e) => { const b = e.target.closest("[data-tick-mode]"); if (b && b.dataset.tickMode !== T.mode) setTickMode(b.dataset.tickMode); });
+  // a row's box ticks that team; the header box ticks (or unticks) every team the filters leave — the server sends their ids
+  $("rows").addEventListener("change", (e) => { const b = e.target.closest(".tick"); if (b) tick([b.dataset.tick], b.checked); });
+  $("thead").addEventListener("change", async (e) => {
+    if (e.target.id !== "tickAll") return;
+    const on = e.target.checked;
+    try { const d = await (await req({ offset: 0, limit: 1, withIds: "1" })).json(); if (d.ids) tick(d.ids, on); } catch { /* the boxes redraw from the next load */ }
   });
   $("fS").addEventListener("change", (e) => { const [sort, dir] = e.target.value.split(":"); set({ sort, dir }); });
   // phone: the filters are a sheet under the funnel button
@@ -272,6 +312,7 @@
   window.addEventListener("message", (e) => { if (e.origin === location.origin && e.data?.dkbbdb === "close-team") closeTeam(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTeam(); });
   function rowClick(target) {
+    if (target.closest(".tick")) return; // the box ticks the team (its change event); it does not open the pop-up
     const tr = target.closest("tr"); if (!tr) return;
     if (tr.dataset.id) openTeam(tr.dataset.id);
     else if (tr.dataset.player) set({ tab: "teams", p: tr.dataset.player, adv: "", sort: "", dir: "" }); // "Advancing only" is hidden on Exposure, so it is dropped

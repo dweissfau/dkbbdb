@@ -105,6 +105,11 @@ footer a { color: inherit; }
 .hello button { background: none; border: none; color: var(--muted); font: inherit; cursor: pointer; padding: 0 4px; margin-left: auto; }
 .hello button:hover { color: var(--ink); }
 .pill.mini { padding: 2px 10px; font-size: 12.5px; }
+/* team tick boxes on the profile page's Teams rows (and the tick-all box in the header) */
+th.tick, td.tick { width: 1%; padding-right: 2px; }
+input.tick { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); cursor: pointer; vertical-align: middle; display: inline-block; }
+tbody tr.ticked { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+tbody tr.ticked:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
 .check { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 13px; cursor: pointer; user-select: none; }
 .check input { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; }
 th.sortable { cursor: pointer; user-select: none; }
@@ -260,6 +265,12 @@ td.user .pos { margin-right: 4px; }
   .profile tbody td { display: block; padding: 0; border: 0; }
   .profile td.rk, .profile td.col-buyin, .profile td.col-date, .profile td.col-place, .profile td.col-left, .profile td.col-own { display: none; }
   .profile td.contest, .profile td.user { grid-column: 1; grid-row: 1 / span 2; white-space: normal; color: var(--ink); font-weight: 500; font-size: 15px; line-height: 1.3; }
+  /* Teams tab: the tick box is a slim first column; the tournament and the numbers shift one column right */
+  .profile #panel:not(.xp) tbody tr { grid-template-columns: auto 1fr auto; }
+  .profile td.tick { grid-column: 1; grid-row: 1 / span 2; align-self: center; margin-right: -2px; }
+  .profile td.tick .tick { width: 20px; height: 20px; }
+  .profile #panel:not(.xp) td.contest { grid-column: 2; }
+  .profile #panel:not(.xp) td.points, .profile #panel:not(.xp) td.gap { grid-column: 3; }
   .profile td.contest .under, .profile td.user .under { font-size: 12.5px; margin-top: 3px; }
   .profile td.contest .under b { color: var(--ink); }
   .profile td.points { grid-column: 2; grid-row: 1; font-size: 16px; text-align: right; }
@@ -274,7 +285,7 @@ td.user .pos { margin-right: 4px; }
    the team rows are two lines like the phone's (entry fee and draft date under the tournament name) */
 @media (min-width: 641px) {
   .profile .head { gap: 10px; }
-  .profile .head #tabs { order: 0; } .profile .head #advWrap { order: 1; } .profile .head #fT { order: 2; }
+  .profile .head #tabs { order: 0; } .profile .head #advWrap { order: 1; } .profile .head #tickPills { order: 1; } .profile .head #fT { order: 2; }
   .profile .head #fP, .profile .head #fQ { order: 3; } .profile .head #posPills { order: 4; }
   .profile .head .spacer { order: 5; } .profile .head .note { order: 6; } .profile .head .sortwrap { order: 7; }
   .profile .head #advWrap { border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 600; color: var(--ink-2); }

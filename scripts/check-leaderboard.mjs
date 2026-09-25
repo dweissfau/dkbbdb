@@ -71,6 +71,18 @@ ok("players view: position filter + sort by advance rate", qbs.rows.every((r) =>
 const pvU = await playersView(db, { u: "fleaflick" });
 ok("players view within one username", pvU.stats.field === 10 && pvU.rows.every((r) => r.teams <= 10));
 
+// ticked teams: only= keeps just those entry ids, hide= drops them — both views, tiles (scope) follow, the profile does not
+const tk = byU.rows.slice(0, 3).map((r) => r.id);
+const onlyT = await leaderboard(db, { u: "fleaflick", only: tk.join(","), withIds: "1" });
+ok("only=: just the ticked teams, their ids listed, scope follows, profile stays whole", onlyT.total === 3 && onlyT.rows.every((r) => tk.includes(r.id)) && onlyT.ids?.length === 3 && onlyT.scope.teams === 3 && onlyT.filter.ticks.only === 3 && onlyT.profile.teams === 10, `${onlyT.total} teams, ids ${onlyT.ids?.length}`);
+const hideT = await leaderboard(db, { u: "fleaflick", hide: tk.join(",") });
+ok("hide=: everything but the ticked teams", hideT.total === 7 && hideT.rows.every((r) => !tk.includes(r.id)) && hideT.filter.ticks.hide === 3 && hideT.ids === undefined, `${hideT.total} teams`);
+const pvOnly = await playersView(db, { u: "fleaflick", only: tk.join(","), limit: 200 });
+ok("players view over the ticked teams: exposure is out of 3", pvOnly.stats.field === 3 && pvOnly.rows.every((r) => r.teams <= 3 && Math.abs(r.own - 100 * r.teams / 3) < 0.01) && pvOnly.scope.teams === 3, `${pvOnly.total} players, top ${pvOnly.rows[0]?.name} on ${pvOnly.rows[0]?.teams}`);
+const foreign = all.rows.find((r) => r.user !== "fleaflick");
+ok("junk ids = no filter; another account's ids match nothing", (await leaderboard(db, { u: "fleaflick", only: "abc,-1" })).total === 10 && (await leaderboard(db, { u: "fleaflick", only: String(foreign.id) })).total === 0 && (await leaderboard(db, { u: "fleaflick", hide: String(foreign.id) })).total === 10);
+ok("only= combines with the tournament filter", (await leaderboard(db, { u: "fleaflick", t: byU.rows[0].contest, only: tk.join(",") })).total === tk.filter((id) => byU.rows.find((r) => r.id === id).contest === byU.rows[0].contest).length);
+
 await db.end();
 console.log(checks.every(Boolean) ? `\nall ${checks.length} checks pass` : `\n${checks.filter((c) => !c).length} FAILED`);
 process.exit(checks.every(Boolean) ? 0 : 1);
