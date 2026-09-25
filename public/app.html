@@ -59,6 +59,22 @@ section.tab { display: none; } section.tab.on { display: block; }
 .dd-actions { display: flex; gap: 12px; padding: 2px 6px 6px; border-bottom: 1px solid var(--grid); margin-bottom: 4px; }
 .dd-actions a { color: var(--accent); cursor: pointer; font-size: 12px; font-weight: 600; }
 .filters .count { color: var(--muted); font-size: 12.5px; margin-left: auto; }
+/* team tick boxes (Season + Rosters rows) and the "Teams" picker in the filter bar */
+th[data-key="pick"], td.tick-cell { width: 28px; padding-left: 8px; padding-right: 4px; text-align: center; }
+td.tick-cell { cursor: pointer; }
+input.tick { width: 15px; height: 15px; margin: 0; accent-color: var(--accent); cursor: pointer; vertical-align: middle; }
+tbody tr.ticked td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+#pickPanel { min-width: 340px; }
+#pickPanel .dd-modes { display: flex; gap: 4px; padding: 2px 6px 8px; border-bottom: 1px solid var(--grid); margin-bottom: 4px; flex-wrap: wrap; align-items: center; }
+#pickPanel .dd-modes button { border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+#pickPanel .dd-modes button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+#pickPanel .dd-modes a { color: var(--accent); cursor: pointer; font-size: 12px; font-weight: 600; margin-left: auto; }
+#pickPanel .hint { color: var(--muted); font-size: 12px; padding: 4px 6px; white-space: normal; }
+#pickPanel label span.m { color: var(--muted); }
+/* phone season cards are <button>s, so their tick is a styled span, not a nested input */
+.srow .tick-box { display: inline-flex; align-items: center; justify-content: center; flex: none; align-self: center; width: 22px; height: 22px; margin: 0 -2px 0 -4px;
+  border: 1.5px solid var(--border); border-radius: 6px; color: transparent; font-size: 14px; font-weight: 800; line-height: 1; }
+.srow .tick-box.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 table { border-collapse: collapse; width: 100%; }
 th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
@@ -300,6 +316,10 @@ nav.tabs button[data-tab="partners"], nav.tabs button[data-tab="debug"], [data-s
     <input type="number" id="fLastN" placeholder="Last N drafts" title="Only the N most recent drafts (after other roster filters)" style="width:100px" min="1">
     <input type="number" id="fAdpMax" placeholder="ADP ≤" title="Only players whose current DK ADP is at or under this" style="width:76px" min="1">
     <input type="search" id="fSearch" placeholder="Search player…">
+    <div class="dd" id="pickDD" title="Tick teams on the Season or Rosters tab, then show only those teams (or hide them) everywhere">
+      <button class="dd-btn" id="pickBtn">Teams: none ticked ▾</button>
+      <div class="dd-panel" id="pickPanel"></div>
+    </div>
     <span class="count" id="filterCount"></span>
   </div>
 

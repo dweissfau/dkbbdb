@@ -54,6 +54,26 @@ for (const tab of ["exposure", "balance", "overview", "rosters", "analytics"]) {
 const tag = modal.querySelector(".gdone, .playing, .gnext");
 ok("compact rows were expanded: the roster shows game tags", !!tag, tag?.textContent ?? "no game tag found");
 ok("live view fits Vercel's 4.5 MB response cap", JSON.stringify(view).length < 3.0e6, `${(JSON.stringify(view).length / 1e6).toFixed(2)} MB`);
+// team tick boxes → the "Teams" picker in the filter bar drives every filtered tab
+d.querySelector('nav.tabs button[data-tab="season"]').click();
+const total = portfolio.drafts.length, pickBtn = () => d.getElementById("pickBtn").textContent;
+d.querySelectorAll("#seasonTable tbody tr .tick")[0].click();
+d.querySelectorAll("#seasonTable tbody tr .tick")[1].click();
+ok("ticking two teams updates the picker", pickBtn().startsWith("2 teams ticked"), pickBtn());
+ok("ticked rows stay marked after the rerender", d.querySelectorAll("#seasonTable tbody tr.ticked").length === 2 && d.querySelectorAll("#rosterTable tbody tr.ticked").length === 2);
+d.querySelector('#pickPanel button[data-mode="only"]').click();
+ok("Only ticked: season shows 2 rows", d.querySelectorAll("#seasonTable tbody tr").length === 2, pickBtn());
+ok("Only ticked: exposure counts 2 rosters", /· 2 rosters ·/.test(d.getElementById("filterCount").textContent), d.getElementById("filterCount").textContent);
+ok("Only ticked: rosters tab shows 2 rows", d.querySelectorAll("#rosterTable tbody tr").length === 2);
+d.querySelector('#pickPanel button[data-mode="hide"]').click();
+ok("Hide ticked: season shows all but 2", d.querySelectorAll("#seasonTable tbody tr").length === total - 2, pickBtn());
+const saved = JSON.parse(w.localStorage.getItem("dkbb-picks-v1") ?? "{}");
+ok("ticks + mode persisted in this browser", saved.ids?.length === 2 && saved.mode === "hide", JSON.stringify(saved));
+d.querySelector('#pickPanel [data-act="clear"]').click();
+ok("Clear ticks restores every team", d.querySelectorAll("#seasonTable tbody tr").length === total && pickBtn().startsWith("Teams: none"), pickBtn());
+d.querySelector("#seasonTable thead .tick-all").click();
+ok("header box ticks every team shown", pickBtn().startsWith(`${total} teams ticked`), pickBtn());
+d.querySelector('#pickPanel [data-act="clear"]').click();
 ok("no script errors", errors.length === 0, errors.slice(0, 3).join(" || "));
 console.log(checks.every(Boolean) ? `\nall ${checks.length} checks pass` : `\n${checks.filter((c) => !c).length} FAILED`);
 process.exit(checks.every(Boolean) ? 0 : 1);

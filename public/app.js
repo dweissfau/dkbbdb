@@ -17,9 +17,43 @@ for (const arr of picksByEntry.values()) arr.sort((a, b) => a.pk - b.pk);
 const draftById = new Map(DK.drafts.map((d) => [d.id, d]));
 
 // ---------- filters ----------
-const F = { pos: "", team: "", contests: null, buyins: null, from: "", to: "", lastN: "", adpMax: "", search: "" }; // contests/buyins: null = all, Set = only these
+const F = { pos: "", team: "", contests: null, buyins: null, from: "", to: "", lastN: "", adpMax: "", search: "", pick: new Set(), pickMode: "" }; // contests/buyins: null = all, Set = only these
+// ticked teams: every team row (Season, Rosters) has a tick box; F.pick = ticked entry ids, F.pickMode = "" (ticks are
+// just marks) | "only" (the filter keeps only ticked teams) | "hide" (drops them). Kept in this browser across reloads
+// (entry ids are unique across accounts, so ids that are not in the loaded portfolio are simply ignored).
+const PICK_KEY = "dkbb-picks-v1";
+try {
+  const saved = JSON.parse(localStorage.getItem(PICK_KEY) ?? "null");
+  if (saved && Array.isArray(saved.ids)) {
+    const known = new Set(DK.drafts.map((d) => d.id));
+    F.pick = new Set(saved.ids.filter((id) => known.has(id)));
+    if (["only", "hide"].includes(saved.mode) && F.pick.size) F.pickMode = saved.mode;
+  }
+} catch { /* storage unavailable — ticks last for this page load only */ }
+function savePicks() { try { localStorage.setItem(PICK_KEY, JSON.stringify({ ids: [...F.pick], mode: F.pickMode })); } catch { /* ignore */ } }
+function setPick(ids, on) {
+  for (const id of ids) { if (on) F.pick.add(id); else F.pick.delete(id); }
+  if (!F.pick.size) F.pickMode = "";
+  savePicks(); rerenderAll();
+}
+function setPickMode(mode) { F.pickMode = F.pick.size ? mode : ""; savePicks(); rerenderAll(); }
+const tickCell = (id) => `<td class="tick-cell" title="Tick teams, then use “Teams” in the filter bar to see only them (or hide them)"><input type="checkbox" class="tick" data-pick="${id}"${F.pick.has(id) ? " checked" : ""}></td>`;
+// header tick box: ticks / unticks every team in the table as currently filtered
+const tickHeader = (ids) => `<input type="checkbox" class="tick tick-all" title="Tick / untick all ${ids.length} teams shown"${ids.length && ids.every((id) => F.pick.has(id)) ? " checked" : ""}${ids.some((id) => F.pick.has(id)) && !ids.every((id) => F.pick.has(id)) ? ' data-some="1"' : ""}>`;
+function wireTicks(tableEl, ids) {
+  tableEl.querySelectorAll("tbody .tick-cell").forEach((td) => td.onclick = (e) => {
+    e.stopPropagation();
+    const box = td.querySelector("input");
+    if (e.target !== box) box.checked = !box.checked;
+    setPick([Number(box.dataset.pick)], box.checked);
+  });
+  const all = tableEl.querySelector("thead .tick-all");
+  if (all) { all.indeterminate = all.dataset.some === "1"; all.onclick = (e) => { e.stopPropagation(); setPick(ids, all.checked); }; }
+}
 function filteredDrafts() {
   let out = DK.drafts.filter((d) => {
+    if (F.pickMode === "only" && !F.pick.has(d.id)) return false;
+    if (F.pickMode === "hide" && F.pick.has(d.id)) return false;
     if (F.contests && !F.contests.has(d.name)) return false;
     if (F.buyins && !F.buyins.has(String(d.buyIn))) return false;
     if (d.date) {
@@ -133,7 +167,8 @@ function renderExposure() {
     { key: "med", label: "Median", num: 1, sort: 1 }, { key: "adp", label: "DK ADP", num: 1, sort: 1 },
     { key: "diff", label: "vs ADP", num: 1, sort: 1 },
   ], rows, expState, renderExposure);
-  document.getElementById("filterCount").textContent = `${rows.length} players · ${total} rosters · ${fmt$(totalFees)} in filter`;
+  document.getElementById("filterCount").textContent = `${rows.length} players · ${total} rosters · ${fmt$(totalFees)} in filter` +
+    (F.pickMode === "only" ? ` · ticked teams only` : F.pickMode === "hide" ? ` · ${F.pick.size} ticked team${F.pick.size === 1 ? "" : "s"} hidden` : "");
 }
 
 // ---------- balance ----------
@@ -298,15 +333,18 @@ function renderRosters() {
   const rows = filteredDrafts().map((d) => {
     const c = constructionOf(d.id);
     const row = { id: d.id, date: d.date ?? "", name: d.name, buyIn: d.buyIn, slot: d.slot,
-      qb: c.QB, rb: c.RB, wr: c.WR, te: c.TE, state: d.state };
-    row.__html = `<tr class="click" data-id="${d.id}">
+      qb: c.QB, rb: c.RB, wr: c.WR, te: c.TE, state: d.state, pick: F.pick.has(d.id) ? 1 : 0 };
+    row.__html = `<tr class="click${row.pick ? " ticked" : ""}" data-id="${d.id}">
+      ${tickCell(d.id)}
       <td>${localDate(d.date)}</td><td style="white-space:normal">${esc(d.name)}</td>
       <td class="num">${fmt$(d.buyIn)}</td><td class="num">${d.slot ?? "—"}</td>
       <td class="num">${c.QB}</td><td class="num">${c.RB}</td><td class="num">${c.WR}</td><td class="num">${c.TE}</td>
       <td>${d.state === "Completed" ? "Complete" : `<span class="warn">${esc(d.state)} (${d.picksMade}/${d.picksTotal})</span>`}</td></tr>`;
     return row;
   });
+  const shownIds = rows.map((r) => r.id);
   renderTable(document.getElementById("rosterTable"), [
+    { key: "pick", label: tickHeader(shownIds) },
     { key: "date", label: "Date", sort: 1 }, { key: "name", label: "Contest", sort: 1 },
     { key: "buyIn", label: "Buy-in", num: 1, sort: 1 }, { key: "slot", label: "Slot", num: 1, sort: 1 },
     { key: "qb", label: "QB", num: 1, sort: 1 }, { key: "rb", label: "RB", num: 1, sort: 1 },
@@ -314,7 +352,8 @@ function renderRosters() {
     { key: "state", label: "Status", sort: 1 },
   ], rows, rosterState, renderRosters);
   document.querySelectorAll("#rosterTable tbody tr").forEach((tr) =>
-    tr.onclick = () => openRoster(Number(tr.dataset.id)));
+    tr.onclick = (e) => { if (!e.target.closest(".tick-cell")) openRoster(Number(tr.dataset.id)); });
+  wireTicks(document.getElementById("rosterTable"), shownIds);
 }
 function stacksOf(entryId) {
   const picks = picksByEntry.get(entryId) ?? [];
@@ -508,7 +547,9 @@ function renderSeason() {
     const chip = advChip(d, s, "—");
     const race = raceOf(d, s);
     row.race = row.pct; // sorts like Place
-    row.__html = `<tr class="click${hit?.mine.length ? " hit-me" : hit?.opps.length ? " hit-opp" : ""}${s.advancing ? " adv-in" : ""}" data-id="${d.id}">
+    row.pick = F.pick.has(d.id) ? 1 : 0;
+    row.__html = `<tr class="click${hit?.mine.length ? " hit-me" : hit?.opps.length ? " hit-opp" : ""}${s.advancing ? " adv-in" : ""}${row.pick ? " ticked" : ""}" data-id="${d.id}">
+      ${tickCell(d.id)}
       <td>${localDate(d.date)}</td>
       <td style="white-space:normal">${esc(shortContest(d.name))}</td>
       ${nq ? `<td>${hitCell}</td>` : ""}
@@ -533,7 +574,9 @@ function renderSeason() {
     rows.push(row);
   }
   if (seasonState.key === "order") rows.sort(defaultOrder); // renderTable leaves the order alone when no column matches
+  const shownIds = rows.map((r) => r.id);
   renderTable(document.getElementById("seasonTable"), [
+    { key: "pick", label: tickHeader(shownIds) },
     { key: "date", label: "Drafted", sort: 1 }, { key: "name", label: "Contest", sort: 1 },
     ...(nq ? [{ key: "hit", label: "Has him", sort: 1 }] : []),
     { key: "buyIn", label: "Buy-in", num: 1, sort: 1 }, { key: "pct", label: "Place", num: 1, sort: 1 },
@@ -546,7 +589,9 @@ function renderSeason() {
     { key: "prizes", label: "Won", num: 1, sort: 1 }, { key: "state", label: "Status", sort: 1 },
   ], rows, seasonState, renderSeason);
   document.querySelectorAll("#seasonTable tbody tr").forEach((tr) =>
-    tr.onclick = () => openSeason(Number(tr.dataset.id)));
+    tr.onclick = (e) => { if (!e.target.closest(".tick-cell")) openSeason(Number(tr.dataset.id)); });
+  wireTicks(document.getElementById("seasonTable"), shownIds);
+  renderPickBar();
   // phone list in the same order as the table (renderTable sorted rows in place)
   document.getElementById("seasonList").innerHTML = rows.map((r) => r.__card).join("");
   const cnt = document.getElementById("seasonCount");
@@ -611,12 +656,16 @@ function seasonCardHtml(d, s, hit) {
   const stake = (d.buyIn ?? 0) * s.myShare;
   const chip = advChip(d, s, "no rank yet");
   const dShort = s.delta == null || s.delta === 0 ? "" : s.delta > 0 ? ` · <span class="diff-good">▲${s.delta}</span>` : ` · <span class="diff-bad">▼${-s.delta}</span>`;
-  return `<button class="srow${hit?.mine.length ? " hit-me" : hit?.opps.length ? " hit-opp" : ""}${s.advancing ? " adv-in" : ""}" type="button" data-id="${d.id}" title="${esc(shortContest(d.name))}"><span class="tl">
+  return `<button class="srow${hit?.mine.length ? " hit-me" : hit?.opps.length ? " hit-opp" : ""}${s.advancing ? " adv-in" : ""}" type="button" data-id="${d.id}" title="${esc(shortContest(d.name))}"><span class="tick-box${F.pick.has(d.id) ? " on" : ""}" data-pick="${d.id}" role="checkbox" aria-checked="${F.pick.has(d.id)}" aria-label="Tick this team">✓</span><span class="tl">
       <span class="bar" title="${s.rank != null ? `${ord(s.rank)} of ${s.entrants ?? "?"} · ` : ""}top ${s.cutoff ?? 2} advance${s.advancing ? " — inside the cutoff" : ""}"><span class="zone" style="width:${zonePct}%"></span>${markPct != null ? `<span class="mark" style="left:${markPct}%;--left:${leftPct}%" title="${left != null ? `${left} of ${nR} players still to play` : ""}"></span>` : ""}</span>
       <span class="ks"><span class="ks-i"><span class="k">Buy-in</span><span class="v">${fmt$(stake)}</span></span><span class="ks-i"><span class="k">Left</span><span class="v">${left ?? "—"}</span></span><span class="ks-i ks-wk" title="points scored this week (FPTS is the season total)"><span class="k">${SEA.week ? `Wk ${SEA.week}` : "This wk"}</span><span class="v">${(() => { const w = teamWeekPts(d); return w != null ? w.toFixed(2) : "—"; })()}</span></span><span class="ks-i"><span class="k">FPTS</span><span class="v">${s.points != null ? s.points.toFixed(2) : "—"}</span></span>${s.prizes ? `<span class="ks-i"><span class="k">Won</span><span class="v won">${fmt$(s.prizes)}</span></span>` : ""}</span>
     </span><span class="tr"><span class="pl">${s.rank != null ? `${ord(s.rank)}<small>/${s.entrants ?? "?"}</small>` : "—"}<span class="chev" aria-hidden="true">›</span></span>${chip}<small class="when">${localDate(d.date)} · pick ${d.slot ?? "—"}${dShort}</small></span></button>`;
 }
-document.getElementById("seasonList").addEventListener("click", (e) => { const b = e.target.closest(".srow"); if (b) openSeason(Number(b.dataset.id)); });
+document.getElementById("seasonList").addEventListener("click", (e) => {
+  const t = e.target.closest(".tick-box");
+  if (t) { e.stopPropagation(); setPick([Number(t.dataset.pick)], !t.classList.contains("on")); return; }
+  const b = e.target.closest(".srow"); if (b) openSeason(Number(b.dataset.id));
+});
 
 function summarizePartners(shared) {
   const n = new Map();
@@ -1218,6 +1267,35 @@ for (const [id, key] of [["fTeam", "team"], ["fFrom", "from"], ["fTo", "to"], ["
   document.getElementById(id).addEventListener("input", (e) => { F[key] = e.target.value; rerenderAll(); });
 }
 function rerenderAll() { renderSeason(); renderExposure(); renderBalance(); renderRosters(); renderAnalytics(); }
+
+// "Teams" picker in the filter bar: shows what is ticked, switches between marks-only / only these / hide these,
+// and lists the ticked teams (untick one from the list, or clear them all). Redrawn by renderSeason on every rerender.
+function renderPickBar() {
+  const btn = document.getElementById("pickBtn"), panel = document.getElementById("pickPanel");
+  const n = F.pick.size, teams = `${n} team${n === 1 ? "" : "s"}`;
+  btn.textContent = !n ? "Teams: none ticked ▾" : F.pickMode === "only" ? `Only ${teams} ▾` : F.pickMode === "hide" ? `Hiding ${teams} ▾` : `${teams} ticked ▾`;
+  btn.classList.toggle("active", n > 0 && F.pickMode !== "");
+  const picked = DK.drafts.filter((d) => F.pick.has(d.id)).slice().reverse(); // newest draft first
+  const pickedFees = picked.reduce((s, d) => s + (d.buyIn ?? 0), 0);
+  panel.innerHTML = `<div class="dd-modes">
+      <button type="button" data-mode="" class="${F.pickMode === "" ? "on" : ""}" title="Ticks are just marks — every filter shows all teams">All teams</button>
+      <button type="button" data-mode="only" class="${F.pickMode === "only" ? "on" : ""}" title="Every tab shows only the ticked teams"${n ? "" : " disabled"}>Only ticked</button>
+      <button type="button" data-mode="hide" class="${F.pickMode === "hide" ? "on" : ""}" title="Every tab leaves the ticked teams out"${n ? "" : " disabled"}>Hide ticked</button>
+      ${n ? `<a data-act="clear">Clear ticks</a>` : ""}
+    </div>` +
+    (n ? `<div class="hint">${teams} · ${fmt$(pickedFees)} in buy-ins · untick here or on the Season / Rosters tab</div>` +
+      picked.map((d) => `<label title="${esc(d.name)}"><input type="checkbox" checked data-pick="${d.id}"> ${esc(shortContest(d.name))} <span class="m">· ${localDate(d.date)} · pick ${d.slot ?? "—"} · ${fmt$(d.buyIn)}</span></label>`).join("")
+      : `<div class="hint">Tick the boxes next to teams on the Season or Rosters tab (the header box ticks everything currently shown — e.g. filter to one buy-in first), then choose “Only ticked” to see exposures, balance and analytics for just those teams, or “Hide ticked” to leave them out.</div>`);
+  panel.querySelectorAll(".dd-modes button").forEach((b) => b.onclick = (e) => { e.stopPropagation(); setPickMode(b.dataset.mode); });
+  const clear = panel.querySelector("[data-act=clear]");
+  if (clear) clear.onclick = (e) => { e.stopPropagation(); setPick([...F.pick], false); };
+  panel.querySelectorAll("label input").forEach((b) => b.onchange = () => setPick([Number(b.dataset.pick)], b.checked));
+}
+{
+  const dd = document.getElementById("pickDD"), btn = document.getElementById("pickBtn"), panel = document.getElementById("pickPanel");
+  btn.onclick = (e) => { e.stopPropagation(); document.querySelectorAll(".dd.open").forEach((x) => { if (x !== dd) x.classList.remove("open"); }); dd.classList.toggle("open"); };
+  panel.onclick = (e) => e.stopPropagation();
+}
 
 // populate filter options
 {
