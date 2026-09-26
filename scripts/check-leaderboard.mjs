@@ -83,6 +83,20 @@ const foreign = all.rows.find((r) => r.user !== "fleaflick");
 ok("junk ids = no filter; another account's ids match nothing", (await leaderboard(db, { u: "fleaflick", only: "abc,-1" })).total === 10 && (await leaderboard(db, { u: "fleaflick", only: String(foreign.id) })).total === 0 && (await leaderboard(db, { u: "fleaflick", hide: String(foreign.id) })).total === 10);
 ok("only= combines with the tournament filter", (await leaderboard(db, { u: "fleaflick", t: byU.rows[0].contest, only: tk.join(",") })).total === tk.filter((id) => byU.rows.find((r) => r.id === id).contest === byU.rows[0].contest).length);
 
+// ---- the leaderboard page's menus and the excluded-players filter ----
+ok("users list: every synced account, counts add up to every team", all.users.length >= 2 && all.users.reduce((s2, x) => s2 + x.teams, 0) === all.teams && all.users.some((x) => x.name === "fleaflick" && x.teams === 10), all.users.map((x) => `${x.name}: ${x.teams}`).join(" | "));
+const byX = await leaderboard(db, { x: p.id, limit: 200 });
+ok("x=: teams WITHOUT the player = every team minus the teams with him", byX.total === all.teams - byP.total && byX.filter.x.length === 1 && byX.filter.x[0].id === p.id && byX.filter.p.length === 0, `${byX.total} without ${p.name}`);
+ok("a player on both lists is only wanted, not excluded", (await leaderboard(db, { p: p.id, x: p.id })).total === byP.total);
+const px = await leaderboard(db, { p: p.id, x: b2.id, limit: 200 }), pAndB = await leaderboard(db, { p: `${p.id},${b2.id}` });
+ok("p= and x= combine: teams with A that do not have B", px.total === byP.total - pAndB.total && px.filter.x[0].id === b2.id, `${px.total} teams with ${p.name} and not ${b2.name}`);
+const pvX = await playersView(db, { x: p.id, limit: 200 });
+ok("players view without him: he is gone, ownership is out of the teams without him", pvX.stats.field === byX.total && !pvX.rows.some((r) => r.id === p.id) && pvX.rows.every((r) => Math.abs(r.own - 100 * r.teams / byX.total) < 0.01), `${pvX.total} players over ${pvX.stats.field} teams`);
+const pvP = await playersView(db, { p: p.id, limit: 200 });
+ok("players view with him: 100% ownership, field = his teams", pvP.stats.field === byP.total && pvP.rows.find((r) => r.id === p.id)?.own === 100 && pvP.filter.p[0].id === p.id);
+const inT = await searchPlayers(db, p.name, "", t);
+ok("player search within a tournament counts that tournament's teams", inT.length >= 1 && inT[0].teams === (await leaderboard(db, { t, p: p.id })).total && inT[0].teams <= p.teams, `${inT[0]?.name}: ${inT[0]?.teams} in ${t}`);
+
 await db.end();
 console.log(checks.every(Boolean) ? `\nall ${checks.length} checks pass` : `\n${checks.filter((c) => !c).length} FAILED`);
 process.exit(checks.every(Boolean) ? 0 : 1);

@@ -2,4 +2,3 @@ extension
 scripts
 store
 .env*
-public/leaderboard.html

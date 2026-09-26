@@ -319,3 +319,26 @@ td.user .pos { margin-right: 4px; }
 .goform { display: flex; gap: 8px; margin-top: 10px; }
 .goform input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--page); color: var(--ink); font: inherit; font-size: 16px; }
 .goform input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* leaderboard (/leaderboard): "Updated …" line, then the filter card — tournament · user · rostered players · excluded players */
+.board .upd { text-align: center; color: var(--muted); font-size: 12.5px; margin: 0 0 10px; }
+.fcard { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 22px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 14px; }
+.f { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.f .lbl { color: var(--ink-2); font-size: 11.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+.f.x .lbl { color: var(--bad); }
+.f select, .f .find input { width: 100%; padding: 10px 12px; font-size: 15px; border-radius: 8px; border: 1px solid var(--line); background: var(--page); color: var(--ink); font: inherit; }
+.f .find { flex: none; max-width: none; }
+.f.x .find input { border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
+.f.x .find input:focus { outline-color: var(--bad); }
+.selx { position: relative; }
+.selx select { padding-right: 36px; }
+.selx button { position: absolute; right: 22px; top: 50%; transform: translateY(-50%); background: none; border: 0; color: var(--muted); font: inherit; cursor: pointer; padding: 4px 6px; line-height: 1; }
+.selx button:hover { color: var(--ink); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips:empty { display: none; }
+.tag.x { border-color: rgba(230,103,103,.5); color: #f08a8a; }
+.tag.x .tlogo { opacity: .8; }
+@media (max-width: 640px) {
+  .fcard { grid-template-columns: 1fr; gap: 12px; padding: 12px; }
+  .f select, .f .find input { font-size: 16px; }
+}

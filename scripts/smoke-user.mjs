@@ -58,9 +58,10 @@ ok("no script errors", errors.length === 0, errors.slice(0, 3).join(" | "));
 ok("no username search anywhere on the page", !d.querySelector("#find") && ![...d.querySelectorAll("input")].some((i) => /username/i.test(i.placeholder + i.getAttribute("aria-label"))));
 const hdr = { headers: process.env.VERCEL_OIDC_TOKEN ? { "x-vercel-trusted-oidc-idp-token": process.env.VERCEL_OIDC_TOKEN } : {} };
 ok("api: username search is gone", (await (await fetch(`${site}/api/search?type=user&q=kkn`, hdr)).json()).results.length === 0);
-ok("api: player search needs the account and counts only its teams", (await (await fetch(`${site}/api/search?type=player&q=justin`, hdr)).json()).results.length === 0
+ok("api: player search within the account counts only its teams; without one it counts the whole field", (await (await fetch(`${site}/api/search?type=player&q=justin`, hdr)).json()).results.some((r) => r.teams > 10)
   && (await (await fetch(`${site}/api/search?type=player&q=justin&u=fleaflick`, hdr)).json()).results.every((r) => r.teams <= 10));
-ok("api: the whole-field board is not served", (await fetch(`${site}/api/leaderboard?limit=1`, hdr)).status === 404);
+{ const b = await (await fetch(`${site}/api/leaderboard?limit=1`, hdr)).json();
+  ok("api: no whole-field board — without a username the answer is the biggest tournament", b.live && b.filter.t === b.tournaments[0].name && b.total === b.tournaments[0].teams && b.total < b.teams, `${b.filter.t}: ${b.total} of ${b.teams}`); }
 
 const nobody = boot(`${site}/u/nobody-xyz-123`); await wait(5000);
 ok("unknown username → 'no teams yet' with the connect link", /No teams under/.test(text(nobody.d.getElementById("panel"))) && !!nobody.d.querySelector('#panel a[href="/"]') && nobody.d.querySelectorAll(".tile").length === 0, text(nobody.d.getElementById("panel")).slice(0, 80));

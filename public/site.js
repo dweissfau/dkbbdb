@@ -1,5 +1,6 @@
-// Suggestion box for the profile page's player filter:
-//   dkbbSuggest(formEl, "player", onPick, { u: username })   → onPick(result) with a row of /api/search
+// Suggestion box for a player filter:
+//   dkbbSuggest(formEl, "player", onPick, { u: username, t: tournament })   → onPick(result) with a row of /api/search
+// scope may be a function returning that object (the leaderboard's changes as its menus change).
 // Enter picks the first suggestion; Esc / click-away closes the list.
 window.dkbbSuggest = (form, type, onPick, scope = {}) => {
   const q = form.querySelector("input"), hits = form.querySelector(".hits");
@@ -20,7 +21,8 @@ window.dkbbSuggest = (form, type, onPick, scope = {}) => {
     timer = setTimeout(async () => {
       const mine = ++seq;
       try {
-        const { results } = await (await fetch(`/api/search?type=${type}&q=${encodeURIComponent(s)}${scope.u ? "&u=" + encodeURIComponent(scope.u) : ""}`)).json();
+        const sc = typeof scope === "function" ? scope() : scope;
+        const { results } = await (await fetch(`/api/search?type=${type}&q=${encodeURIComponent(s)}${sc.u ? "&u=" + encodeURIComponent(sc.u) : ""}${sc.t ? "&t=" + encodeURIComponent(sc.t) : ""}`)).json();
         if (mine !== seq) return;
         last = results;
         hits.replaceChildren(...(results.length ? results.map((r) => {
