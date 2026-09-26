@@ -4,7 +4,7 @@ import { connect, loadEnv } from "./db.mjs";
 import { buildBase } from "../lib/base.js";
 import { getFeeds } from "../lib/feeds.js";
 import { computeSnapshot, foldWeeks } from "../lib/pubscore.js";
-import { computeBoard, leaderboard, refreshBoard, refreshAfterMs, cachePut, cacheGet, _forget, REFRESH_PLAYING_MS, REFRESH_IDLE_MS, REFRESH_UNKNOWN_MS } from "../lib/leaderboard.js";
+import { computeBoard, leaderboard, refreshBoard, refreshAfterMs, refreshDue, cachePut, cacheGet, _forget, REFRESH_PLAYING_MS, REFRESH_IDLE_MS, REFRESH_UNKNOWN_MS } from "../lib/leaderboard.js";
 
 process.env.DATABASE_URL ??= loadEnv().DATABASE_URL;
 process.env.DKBBDB_SYNC_BOARD = "1";
@@ -49,13 +49,11 @@ const lock2 = await db.query("update board_cache set refreshing_at = now() where
 ok("only one refresh can run at a time", lock.rowCount === 1 && lock2.rowCount === 0);
 await db.query("update board_cache set refreshing_at = null where id = 1");
 
-// refresh cadence: once a minute only while games are on or about to start, otherwise every 30 minutes
+// refresh cadence: a fixed Eastern timetable (lib SCHEDULE — six Sunday marks, Mon/Thu 11:59 pm, 6 am otherwise); the
+// marks themselves are checked in scripts/check-offline.mjs. Here: the next mark is always ahead and within a day.
 const t = Date.now(), idle = { live: true, playing: false, games: { pending: [t + 3 * 3600e3] } };
-ok("board refreshes every minute while a game is playing", refreshAfterMs({ ...idle, playing: true }, t) === REFRESH_PLAYING_MS);
-ok("board refreshes every 30 minutes when no game is near", refreshAfterMs(idle, t) === REFRESH_IDLE_MS);
-ok("…every minute again from 20 minutes before a kickoff", refreshAfterMs({ ...idle, games: { pending: [t + 15 * 60e3] } }, t) === REFRESH_PLAYING_MS);
-ok("…and for 30 minutes after a kickoff the stored board did not see start", refreshAfterMs({ ...idle, games: { pending: [t - 25 * 60e3] } }, t) === REFRESH_PLAYING_MS && refreshAfterMs({ ...idle, games: { pending: [t - 45 * 60e3] } }, t) === REFRESH_IDLE_MS);
-ok("every 5 minutes when no schedule is known", refreshAfterMs({ ...idle, games: null }, t) === REFRESH_UNKNOWN_MS);
+ok("the next refresh mark is ahead and within 24 hours", refreshAfterMs(idle, t) > 0 && refreshAfterMs(idle, t) <= 24 * 3600e3, `${(refreshAfterMs(idle, t) / 60e3).toFixed(0)} min`);
+ok("a board scored a week ago is due, one scored now is not", refreshDue(t - 7 * 86400e3, t) && !refreshDue(t, t));
 ok("the stored board carries this week's pending kickoffs", first.games && Array.isArray(first.games.pending), JSON.stringify(first.games?.pending?.slice(0, 3)));
 
 // the shared cache round trip (in-memory stand-in outside Vercel): gzip'd copy comes back identical
