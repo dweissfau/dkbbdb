@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "migrate": "node scripts/migrate.mjs",
-    "import-legacy": "node scripts/import-legacy.mjs"
+    "backup": "node scripts/backup.mjs",
+    "check": "node scripts/check-offline.mjs && node scripts/check-leaderboard.mjs && node scripts/check-board.mjs"
   },
   "keywords": [],
   "author": "",
@@ -12,8 +12,10 @@
   "type": "module",
   "dependencies": {
     "@vercel/blob": "^2.8.0",
-    "@vercel/functions": "^3.9.9",
-    "pg": "^8.23.0"
+    "@vercel/functions": "^3.9.9"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "pg": "^8.23.0"
+  }
 }

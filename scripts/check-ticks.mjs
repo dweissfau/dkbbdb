@@ -5,12 +5,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 
-import { connect, loadEnv, ROOT } from "./db.mjs";
+import { loadEnv, ROOT } from "./db.mjs";
 import { leaderboard, playersView } from "../lib/leaderboard.js";
 const { JSDOM } = createRequire(path.join(ROOT, "..", "package.json"))("jsdom");
-process.env.DATABASE_URL ??= loadEnv().DATABASE_URL;
+
 let pending = 0; const settle = async () => { await new Promise((r) => setTimeout(r, 80)); while (pending > 0) await new Promise((r) => setTimeout(r, 50)); await new Promise((r) => setTimeout(r, 150)); };
-const db = await connect();
+
 const name = process.argv[2] ?? "kknox20";
 
 const html = fs.readFileSync(path.join(ROOT, "public", "u.html"), "utf8").replace('<script src="/site.js"></script>', `<script>${fs.readFileSync(path.join(ROOT, "public", "site.js"), "utf8")}</script>`);
@@ -25,7 +25,7 @@ const dom = new JSDOM(html, { runScripts: "dangerously", url: "https://dkbbdb.co
     calls.push({ method: init?.method ?? "GET", len: String(u).length, q });
     if (url.pathname !== "/api/leaderboard") return { ok: true, status: 200, json: async () => ({ results: [] }) };
     const fn = q.view === "players" ? playersView : leaderboard;
-    pending++; let body; try { body = await fn(db, q); } finally { pending--; }
+    pending++; let body; try { body = await fn(q); } finally { pending--; }
     return { ok: true, status: 200, json: async () => JSON.parse(JSON.stringify(body)) };
   };
 } });
@@ -84,6 +84,6 @@ ok("no script errors", errors.length === 0, errors.slice(0, 3).join(" | "));
   const rows2 = [...d2.querySelectorAll("#rows tr[tabindex]")];
   ok("another account's page: no tick boxes, no pills, stored ticks ignored, every team shown", rows2.length === 10 && !d2.querySelector("input.tick") && !d2.getElementById("tickAll") && d2.getElementById("tickPills").hidden && !d2.body.classList.contains("ticks") && /10 teams/.test(text(d2.getElementById("sub"))) && errors.length === 0, `${rows2.length} rows · ${text(d2.getElementById("sub"))}`);
 }
-await db.end();
+
 console.log(checks.every(Boolean) ? `\nall ${checks.length} checks pass` : `\n${checks.filter((c) => !c).length} FAILED`);
 process.exit(checks.every(Boolean) ? 0 : 1);

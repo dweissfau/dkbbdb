@@ -1,17 +1,16 @@
-// Score one DK account's teams from the new database and (optionally) compare with the single-user site.
+// Score one DK account's teams from the local file store and (optionally) compare with the single-user site.
 //   node scripts/check-view.mjs <dk username> [prod live url] [cookie]
 // e.g. node scripts/check-view.mjs ZBbih  → prints a summary of the computed view
-import { connect, loadEnv } from "./db.mjs";
 import { userView } from "../lib/view.js";
+import { loadStore, accountByName, baseOf } from "../lib/store.js";
 
 const [username, prodUrl, cookie] = process.argv.slice(2);
-process.env.DATABASE_URL ??= loadEnv().DATABASE_URL;
-const db = await connect();
-const u = (await db.query(`select user_key from dk_accounts where lower(username) = lower($1)`, [username])).rows[0];
+const store = await loadStore();
+const u = store ? accountByName(store, username) : null;
 if (!u) { console.error("no such DK account:", username); process.exit(1); }
 
 const t0 = Date.now();
-const { body } = await userView(db, [u.user_key]);
+const { body } = await userView([u.user_key], { base: baseOf(store, [u.user_key]) });
 console.log(`view in ${Date.now() - t0} ms · live ${body.live} · week ${body.week} · teams ${Object.keys(body.status ?? {}).length} · pods ${Object.keys(body.pods ?? {}).length}`);
 console.log("source", JSON.stringify(body.source));
 const ranked = Object.entries(body.status ?? {}).filter(([, s]) => s.rank != null);
@@ -28,4 +27,3 @@ if (prodUrl) {
   }
   console.log(`vs single-user site: ${same} identical rank+points, ${diff} differ, ${missing} not on that page`);
 }
-await db.end();

@@ -1,32 +1,16 @@
-// Take a DraftKings account off dkbbdb: its teams, rank history, and every pod nobody else on the site is in.
-// Frees the username too (the username lock is "first account to sync it").
-//   node scripts/remove-account.mjs <dk username>            shows what would go
-//   node scripts/remove-account.mjs <dk username> --yes      deletes it
-import { connect } from "./db.mjs";
+// Take a DraftKings account off the live site: its file (teams and every league it uploaded) and its rank history;
+// the store is rebuilt without it. Leagues another account also uploaded stay through that account's file.
+//   node scripts/remove-account.mjs <username> [--yes] [site = https://dkbbdb.com]
+import { loadEnv } from "./db.mjs";
 
-const [name, flag] = process.argv.slice(2);
-if (!name) { console.error("usage: node scripts/remove-account.mjs <dk username> [--yes]"); process.exit(1); }
-const db = await connect();
-const accounts = (await db.query("select user_key, username, created_at from dk_accounts where lower(username) = lower($1)", [name])).rows;
-if (!accounts.length) { console.log(`no account named ${name}`); await db.end(); process.exit(0); }
-
-for (const a of accounts) {
-  const teams = (await db.query("select count(*)::int n from entries where user_key = $1", [a.user_key])).rows[0].n;
-  const pods = (await db.query(
-    `select count(*)::int n from contests c where exists (select 1 from entries e where e.contest_id = c.contest_id and e.user_key = $1)
-       and not exists (select 1 from entries e where e.contest_id = c.contest_id and e.user_key <> $1)`, [a.user_key])).rows[0].n;
-  const log = (await db.query("select count(*)::int n, min(at) first, max(at) last, count(distinct sender)::int senders from upload_log where $1 = any(user_keys)", [a.user_key])).rows[0];
-  console.log(`${a.username} (first synced ${new Date(a.created_at).toISOString().slice(0, 10)}): ${teams} teams, ${pods} pods only this account is in · ${log.n} uploads from ${log.senders} sender(s)`);
-  if (flag !== "--yes") continue;
-  await db.query("begin");
-  const cids = (await db.query(
-    `select c.contest_id from contests c where exists (select 1 from entries e where e.contest_id = c.contest_id and e.user_key = $1)
-       and not exists (select 1 from entries e where e.contest_id = c.contest_id and e.user_key <> $1)`, [a.user_key])).rows.map((r) => r.contest_id);
-  await db.query("delete from entries where user_key = $1", [a.user_key]); // rank_history goes with it (cascade)
-  await db.query("delete from contests where contest_id = any($1::bigint[])", [cids]); // pod_teams go with it (cascade)
-  await db.query("delete from dk_accounts where user_key = $1", [a.user_key]);
-  await db.query("commit");
-  console.log(`  removed. (pages refresh within a minute)`);
-}
-if (flag !== "--yes") console.log("nothing deleted — add --yes to remove");
-await db.end();
+const args = process.argv.slice(2), site = args.find((a) => a.startsWith("http")) ?? "https://dkbbdb.com";
+const name = args.find((a) => !a.startsWith("http") && !a.startsWith("--"));
+if (!name) { console.error("usage: node scripts/remove-account.mjs <username> [--yes]"); process.exit(1); }
+const key = process.env.ADMIN_KEY ?? loadEnv().ADMIN_KEY, hdr = { "x-admin-key": key };
+const who = await (await fetch(`${site}/api/admin`, { headers: hdr })).json();
+const a = (who.accounts ?? []).find((x) => String(x.username).toLowerCase() === name.toLowerCase());
+if (!a) { console.log(`no account named ${name}`); process.exit(0); }
+console.log(`${a.username}: ${a.teams} teams, ${a.tournaments} tournaments, signed up ${a.created_at}, last sync ${a.synced_at}`);
+if (!args.includes("--yes")) { console.log("add --yes to remove it"); process.exit(0); }
+const r = await (await fetch(`${site}/api/admin?remove=${encodeURIComponent(a.username)}`, { headers: hdr })).json();
+console.log(JSON.stringify(r));

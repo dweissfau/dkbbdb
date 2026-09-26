@@ -6,11 +6,10 @@
 //   body is the same request — the page uses it when a ticked list is too long for an address.
 // There is no whole-field list: without a username the answer is ONE tournament's teams — the one asked for, or
 // the biggest one when none is (public/leaderboard.html never shows every synced team at once).
-import { db } from "../lib/db.js";
 import * as lb from "../lib/leaderboard.js";
 const { leaderboard, playersView } = lb;
 
-// a request may carry the board refresh — and, right after a week ends, the one-off fold of that week
+// a request may carry the board refresh
 export const config = { maxDuration: 60 };
 
 export default async function handler(req, res) {
@@ -18,9 +17,8 @@ export default async function handler(req, res) {
   const q = { ...req.query, ...Object.fromEntries(Object.entries(body0).filter(([, v]) => typeof v === "string" || typeof v === "number").map(([k, v]) => [k, String(v)])) };
   const fn = q.view === "players" ? playersView : leaderboard;
   if (req.method !== "POST") res.setHeader("cache-control", "public, s-maxage=45, stale-while-revalidate=60");
-  const d = db();
-  let body = await fn(d, q);
-  if (body.live && !String(q.u ?? "").trim() && !String(q.t ?? "").trim() && body.tournaments?.length) body = await fn(d, { ...q, t: body.tournaments[0].name });
-  res.setHeader("x-dkbbdb-board", lb.lastServed || "none"); // mem | cache | db | run — where the board came from
+  let body = await fn(q);
+  if (body.live && !String(q.u ?? "").trim() && !String(q.t ?? "").trim() && body.tournaments?.length) body = await fn({ ...q, t: body.tournaments[0].name });
+  res.setHeader("x-dkbbdb-board", lb.lastServed || "none"); // mem | cache | blob | run — where the board came from
   res.status(200).json(body);
 }

@@ -1,5 +1,6 @@
+.blob
+.env*
+backups
 extension
 scripts
 store
-.env*
-backups

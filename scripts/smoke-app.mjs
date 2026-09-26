@@ -3,17 +3,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
-import { connect, loadEnv, ROOT } from "./db.mjs";
-import { userPortfolio } from "../lib/portfolio.js";
+import { ROOT } from "./db.mjs";
 import { userView } from "../lib/view.js";
+import { loadStore, accountByName, baseOf, portfolioOf } from "../lib/store.js";
 
 const { JSDOM } = createRequire(path.join(ROOT, "..", "package.json"))("jsdom");
-process.env.DATABASE_URL ??= loadEnv().DATABASE_URL;
-const db = await connect();
 const names = (process.argv[2] ?? "kknox20").toLowerCase().split(",");
-const keys = (await db.query("select user_key from dk_accounts where lower(username) = any($1::text[])", [names])).rows.map((r) => r.user_key);
-const [portfolio, view] = [await userPortfolio(db, keys), (await userView(db, keys)).body];
-await db.end();
+const store = await loadStore();
+const keys = names.map((n) => accountByName(store, n)?.user_key).filter(Boolean);
+const [portfolio, view] = [portfolioOf(store, keys), (await userView(keys, { base: baseOf(store, keys) })).body];
 
 const html = fs.readFileSync(path.join(ROOT, "public", "app.html"), "utf8").replace(`<script src="/boot.js"></script>`, "");
 const errors = [];

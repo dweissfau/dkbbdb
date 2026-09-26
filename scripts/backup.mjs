@@ -1,39 +1,29 @@
-// Copy every table of the dkbbdb database to gzip'd JSON files: dkbbdb/backups/<UTC date-time>/<table>.json.gz
-//   node scripts/backup.mjs [--keep 8]
-// Run it weekly (and before anything risky). It reads the whole database once (~the database's size in transfer),
-// so it is NOT something to run in a loop. `--keep` prunes older backup folders (default 8). backups/ is git-ignored.
-// Restore = insert the rows back with db/schema.sql applied first (scripts/restore.mjs when it is needed).
+// Copy every data file of the live site (Vercel Blob, via /api/admin) to dkbbdb/backups/<UTC date-time>/ — the
+// same layout as the store (lib/files.js), so a backup can be dropped into dkbbdb/.blob/ and run locally, or pushed
+// back to the site with scripts/restore.mjs. Run it weekly. `--keep` prunes older backup folders (default 8).
+//   node scripts/backup.mjs [site = https://dkbbdb.com] [--keep 8]
 import fs from "node:fs";
 import path from "node:path";
 import { gzipSync } from "node:zlib";
-import { connect, loadEnv, ROOT } from "./db.mjs";
+import { ROOT, loadEnv } from "./db.mjs";
 
-process.env.DATABASE_URL ??= loadEnv().DATABASE_URL;
-const keep = Number(process.argv[process.argv.indexOf("--keep") + 1]) || 8;
-const dir = path.join(ROOT, "backups"), stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-const out = path.join(dir, stamp);
-fs.mkdirSync(out, { recursive: true });
+const args = process.argv.slice(2), site = args.find((a) => a.startsWith("http")) ?? "https://dkbbdb.com";
+const keep = Number(args[args.indexOf("--keep") + 1]) || 8;
+const key = process.env.ADMIN_KEY ?? loadEnv().ADMIN_KEY;
+if (!key) { console.error("ADMIN_KEY missing (dkbbdb/.env.local)"); process.exit(1); }
+const hdr = { "x-admin-key": key };
+const dir = path.join(ROOT, "backups"), stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19), out = path.join(dir, stamp);
 
-const db = await connect();
-const tables = (await db.query("select tablename from pg_tables where schemaname = 'public' order by tablename")).rows.map((r) => r.tablename);
+const list = await (await fetch(`${site}/api/admin?files=1`, { headers: hdr })).json();
+if (!list.ok) { console.error(list); process.exit(1); }
 let total = 0;
-for (const t of tables) {
-  const rows = [];
-  // pages of 2,000 rows so a big table never sits in memory twice
-  const key = (await db.query(`select a.attname from pg_index i join pg_attribute a on a.attrelid = i.indrelid and a.attnum = any(i.indkey) where i.indrelid = $1::regclass and i.indisprimary order by a.attnum limit 1`, [t])).rows[0]?.attname;
-  for (let off = 0; ; off += 2000) {
-    const page = (await db.query(`select * from ${t}${key ? ` order by ${key}` : ""} limit 2000 offset ${off}`)).rows;
-    rows.push(...page);
-    if (page.length < 2000) break;
-  }
-  const gz = gzipSync(Buffer.from(JSON.stringify(rows)));
-  fs.writeFileSync(path.join(out, `${t}.json.gz`), gz);
-  total += gz.length;
-  console.log(`  ${t.padEnd(22)} ${String(rows.length).padStart(7)} rows  ${(gz.length / 1024).toFixed(0).padStart(6)} KB`);
+for (const f of list.files) {
+  const r = await (await fetch(`${site}/api/admin?file=${encodeURIComponent(f.pathname)}`, { headers: hdr })).json();
+  if (!r.ok) { console.log(`  !! ${f.pathname}: ${r.error}`); continue; }
+  const full = path.join(out, f.pathname); fs.mkdirSync(path.dirname(full), { recursive: true });
+  const gz = gzipSync(Buffer.from(JSON.stringify(r.value))); fs.writeFileSync(full, gz); total += gz.length;
+  console.log(`  ${f.pathname.padEnd(48)} ${(gz.length / 1024).toFixed(0).padStart(6)} KB`);
 }
-await db.end();
-console.log(`backup ${stamp}: ${tables.length} tables, ${(total / 1024 / 1024).toFixed(1)} MB → ${out}`);
-
-// prune
-const olds = fs.readdirSync(dir).filter((d) => fs.statSync(path.join(dir, d)).isDirectory()).sort().slice(0, -keep);
+console.log(`backup ${stamp}: ${list.files.length} files, ${(total / 1024 / 1024).toFixed(1)} MB → ${out}`);
+const olds = fs.existsSync(dir) ? fs.readdirSync(dir).filter((d) => fs.statSync(path.join(dir, d)).isDirectory()).sort().slice(0, -keep) : [];
 for (const d of olds) { fs.rmSync(path.join(dir, d), { recursive: true, force: true }); console.log(`  pruned ${d}`); }
