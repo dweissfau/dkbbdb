@@ -4,6 +4,7 @@
 #   Sunday / Monday / Thursday night games            (00:00–04:59 UTC Mon / Tue / Fri)
 #   every day 6 am ET                                 (stat corrections, the morning board)
 # A run costs about a minute of Actions time; a private repo has 2,000 free minutes a month, a public one unlimited.
+# The only secret is CRON_SECRET (the site's); the job pulls the league file from the site and posts the board back.
 name: score
 on:
   schedule:
@@ -27,8 +28,13 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --omit=dev
+      # the finished-week totals (~3 MB) are kept between runs; a new entry is saved once a day
+      - uses: actions/cache@v4
+        with:
+          path: .blob/store/prior.json.gz
+          key: prior-v1-${{ github.run_id }}
+          restore-keys: prior-v1-
       - run: node scripts/score.mjs
         env:
-          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           DKBBDB_SITE: ${{ vars.DKBBDB_SITE || 'https://dkbbdb.com' }}

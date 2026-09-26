@@ -1,6 +1,6 @@
 // The hand-over endpoint (api/board.js): a board posted in pieces is assembled and served; bad callers are refused.
 // Runs the handler in-process against the LOCAL file store.   node scripts/check-board-post.mjs
-import { gzipSync } from "node:zlib";
+import { gzipSync, gunzipSync } from "node:zlib";
 import handler from "../api/board.js";
 import { leaderboard, _forget } from "../lib/leaderboard.js";
 import { rcDrop } from "../lib/rcache.js";
@@ -14,7 +14,7 @@ const call = (method, body, auth = "Bearer test-secret") => new Promise((resolve
   const res = { code: 200, headers: {}, setHeader(k, v) { this.headers[k] = v; }, status(c) { this.code = c; return this; }, json(j) { resolve({ status: this.code, body: j }); }, end() { resolve({ status: this.code }); } };
   handler({ method, headers: { authorization: auth }, body }, res);
 });
-const keep = await getGz(PATHS.base), keepBoard = await getGz(PATHS.board);
+const keep = await getGz(PATHS.base), keepBoard = await getGz(PATHS.board), keepPrior = await getGz(PATHS.prior);
 const store = { v: 2, at: new Date().toISOString(), accounts: [{ k: "k1", u: "kknox20" }], entries: { 1: { cid: "10", dgid: 5, pp: 2, u: "k1", state: "live", prizes: null } },
   contests: { 10: { name: "T", type: "Best Ball", buyIn: 25, entrants: 2, pp: 2, round: 1, dgid: 5 } }, pods: { 10: { dgid: 5, from: 1, rosters: { 1: { u: "kknox20", d: [100], s: 1, pk: [1] } } } },
   draftables: { 5: { 100: [1, "A", "WR", "MIN", null] } }, sleeper: {}, ladders: {}, groups: [5] };
@@ -35,10 +35,25 @@ try {
   ok("the site now serves the posted board", r.live && r.teams === 3000 && r.rows[0].points === 300, `${r.teams} teams`);
   const st = await call("GET");
   ok("GET reports what is served", st.body.teams === 3000 && st.body.playing === true, JSON.stringify(st.body));
+  // the scoring job pulls the store from the site in pieces
+  const callGet = (query, auth = "Bearer test-secret") => new Promise((resolve) => {
+    const res = { code: 200, setHeader() {}, status(c) { this.code = c; return this; }, json(j) { resolve({ status: this.code, body: j }); } };
+    handler({ method: "GET", headers: { authorization: auth }, query }, res);
+  });
+  ok("pulling the store needs the secret", (await callGet({ file: "store", part: 0 }, "Bearer wrong")).status === 401);
+  const piece = await callGet({ file: "store", part: 0 });
+  const back = JSON.parse(gunzipSync(Buffer.from(piece.body.gz, "base64")).toString());
+  ok("the store comes back whole from the site's memory", piece.status === 200 && piece.body.parts === 1 && back.accounts[0].u === "kknox20" && Object.keys(back.entries).length === 1, `${piece.body.parts} piece, etag ${piece.body.etag}`);
+  // recomputed finished-week totals are posted back and stored
+  const prior = { want: 2, rows: [["10", { through_week: 2, computed_at: new Date().toISOString(), data: {} }]] };
+  const pgz = gzipSync(Buffer.from(JSON.stringify(prior))).toString("base64");
+  const pr = await call("POST", { kind: "prior", stamp: "stamp2", part: 0, parts: 1, gz: pgz });
+  ok("posted totals are stored", pr.status === 200 && pr.body.rows === 1 && (await getGz(PATHS.prior))?.value?.want === 2, JSON.stringify(pr.body));
 } finally {
   await rcDrop("board-v1"); _forget();
   if (keep) await putGz(PATHS.base, keep.value); else await delFile(PATHS.base);
   if (keepBoard) await putGz(PATHS.board, keepBoard.value); else await delFile(PATHS.board);
+  if (keepPrior) await putGz(PATHS.prior, keepPrior.value); else await delFile(PATHS.prior);
 }
 console.log(checks.every(Boolean) ? `\nall ${checks.length} checks pass` : `\n${checks.filter((c) => !c).length} FAILED`);
 process.exit(checks.every(Boolean) ? 0 : 1);
