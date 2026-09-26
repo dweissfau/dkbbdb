@@ -5,7 +5,7 @@
 import * as lb from "../lib/leaderboard.js";
 import { leaderboard, playersView, searchUsers, cachePut, _forget, refreshDue, lastMark } from "../lib/leaderboard.js";
 import { priorFor, _forgetPrior } from "../lib/prior.js";
-import { rcDrop, rcGet } from "../lib/rcache.js";
+import { rcDrop, rcGet, rcPut } from "../lib/rcache.js";
 import { getGz, putGz, delFile, backend } from "../lib/files.js";
 import { PATHS, _forgetStore } from "../lib/store.js";
 const checks = []; const ok = (n, c, x = "") => { checks.push(!!c); console.log(c ? "  ok  " : "  FAIL", n, x); };
@@ -69,6 +69,12 @@ try {
   ok("a new instance gets them from the shared cache", p.stats.reused === 2);
   p = await priorFor(base(["10", "11", "12"]), f);
   ok("a pod nobody has is recomputed and the file written back", p.stats.reused === 2 && p.stats.computed === 1 && (await getGz(PATHS.prior))?.value?.rows?.length === 3, `${(await getGz(PATHS.prior))?.value?.rows?.length} rows in the file`);
+
+  // 4b. a value far bigger than one cache item (the board at 100,000 teams) survives the round trip in pieces
+  const big = { teams: Array.from({ length: 120000 }, (_, i) => ({ id: String(5000000000 + i), user: "u" + (i % 500), points: Math.round(Math.random() * 40000) / 100, picks: Array.from({ length: 20 }, (_, j) => [1000000 + ((i * 37 + j * 101) % 3000), j + 1]) })) };
+  const put = await rcPut("big-test", big, 60), got = await rcGet("big-test");
+  ok("a board-sized value (120,000 teams) is cached in pieces and reads back whole", put && got?.value?.teams?.length === 120000 && got.value.teams[119999].id === big.teams[119999].id, `${(JSON.stringify(big).length / 1e6).toFixed(1)} MB raw`);
+  await rcDrop("big-test");
 
   // 5. the timetable (Eastern): six Sunday marks, Monday/Thursday 11:59 pm, 6:00 am otherwise
   const et = (t) => new Date(t + "-04:00").getTime(); // EDT
