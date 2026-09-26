@@ -2,3 +2,4 @@ extension
 scripts
 store
 .env*
+backups

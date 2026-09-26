@@ -1,4 +1,5 @@
-// Leaderboard filters + player stats straight from the lib (no HTTP), with invariants checked.
+// Leaderboard filters + player stats straight from the lib (no HTTP), with invariants checked. Reads the board from
+// the cache/DB like a page does; DKBBDB_SYNC_BOARD=1 refreshes it once at most (never once per call — 2026-09-26).
 //   node scripts/check-leaderboard.mjs [player name]
 import { connect, loadEnv } from "./db.mjs";
 import { leaderboard, playersView, searchPlayers, searchUsers } from "../lib/leaderboard.js";
