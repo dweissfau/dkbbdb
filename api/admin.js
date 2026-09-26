@@ -6,6 +6,7 @@
 //   GET  ?files=1             list every data file (backups)      GET ?file=<path>   one file, gzip'd, as stored
 //   POST ?import=<table>[&part=n]   a table of the old database (JSON rows, gzip'd, base64 text body) → import/<table>[.n]
 //   GET  ?remove=<username>   take an account off the site (scripts/remove-account.mjs)
+//   GET  ?cleanup=1           delete the import/ files left by a migration
 //   GET  ?migrate=1           turn the imported tables into the site's files (lib/migrate.js), then publish
 import { timingSafeEqual } from "node:crypto";
 import { gunzipSync } from "node:zlib";
@@ -40,6 +41,10 @@ export default async function handler(req, res) {
       const part = req.query.part ? `.${String(req.query.part).replace(/[^0-9]/g, "")}` : "";
       await putGz(`import/${table}${part}.json.gz`, rows);
       return res.status(200).json({ ok: true, table, part: part || null, rows: rows.length });
+    }
+    if (req.query.cleanup === "1") { // the one-off import of the old tables is not needed once migrated
+      const gone = []; for (const f of await listFiles("import/")) { await delFile(f.pathname); gone.push(f.pathname); }
+      return res.status(200).json({ ok: true, deleted: gone });
     }
     if (req.query.remove) { // take an account off the site: its file and its rank history; the store is rebuilt without it
       const store = await loadStore(), a = store?.accounts.find((x) => String(x.u).toLowerCase() === String(req.query.remove).toLowerCase());
