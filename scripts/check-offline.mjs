@@ -6,6 +6,7 @@ import { leaderboard, playersView, searchUsers, cachePut, _forget, lastServed as
 import * as lb from "../lib/leaderboard.js";
 import { refreshDue, lastMark } from "../lib/leaderboard.js";
 import { priorFor, _forgetPrior } from "../lib/prior.js";
+import { rcDrop, rcGet } from "../lib/rcache.js";
 const checks = []; const ok = (n, c, x = "") => { checks.push(!!c); console.log(c ? "  ok  " : "  FAIL", n, x); };
 
 const board = (at) => ({ live: true, at, week: 3, playing: false, games: { pending: [], asOf: Date.now() }, accounts: 1,
@@ -30,6 +31,13 @@ await cachePut(board(new Date(Date.now() - 7 * 86400e3).toISOString()), Date.now
 _forget();
 r = await leaderboard(deadDb, { t: "T" });
 ok("stale cached board: the refresh fails soft and the stale board is served", r.live && r.total === 2, `from ${lb.lastServed}`);
+
+// 2b. the cache entry vanished (expired) AND the database is dead → the board in this instance's memory is served
+//     and put back into the cache, so the next instance finds it again
+await rcDrop("board-v1"); lb._stale();
+r = await leaderboard(deadDb, { t: "T" });
+ok("cache empty + dead database: the in-memory board is served", r.live && r.total === 2 && lb.lastServed === "mem", `from ${lb.lastServed}`);
+ok("…and it is back in the cache for everyone else", !!(await rcGet("board-v1"))?.value?.teams?.length);
 
 // 3. the force flag: fifty calls on a fresh board = no refresh attempts
 process.env.DKBBDB_SYNC_BOARD = "1";
