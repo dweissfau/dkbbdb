@@ -1,11 +1,13 @@
 // GET /api/search?type=player&q=<text>&u=<dk username>&t=<tournament> — player suggestions for a filter box: rostered
-// players (within that account's teams, or within the tournament on the leaderboard) whose name contains every typed
-// word. There is no username search: accounts are picked from the leaderboard's menu, and a page is reached by its address.
+// players (within that account's teams, or within the tournament on the leaderboard) whose name contains every typed word.
+// GET /api/search?type=user&q=<text>&t=<tournament> — the leaderboard's User box: synced accounts whose username
+// contains the typed text, with their team count in that tournament.
 import { db } from "../lib/db.js";
-import { searchPlayers } from "../lib/leaderboard.js";
+import { searchPlayers, searchUsers } from "../lib/leaderboard.js";
 
 export default async function handler(req, res) {
   res.setHeader("cache-control", "public, s-maxage=20");
-  const results = req.query.type === "player" ? await searchPlayers(db(), req.query.q, req.query.u ?? "", req.query.t ?? "") : [];
+  const { type, q, u = "", t = "" } = req.query;
+  const results = type === "player" ? await searchPlayers(db(), q, u, t) : type === "user" ? await searchUsers(db(), q, t) : [];
   res.status(200).json({ results });
 }

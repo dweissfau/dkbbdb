@@ -1,7 +1,7 @@
 // Leaderboard filters + player stats straight from the lib (no HTTP), with invariants checked.
 //   node scripts/check-leaderboard.mjs [player name]
 import { connect, loadEnv } from "./db.mjs";
-import { leaderboard, playersView, searchPlayers } from "../lib/leaderboard.js";
+import { leaderboard, playersView, searchPlayers, searchUsers } from "../lib/leaderboard.js";
 
 process.env.DATABASE_URL ??= loadEnv().DATABASE_URL;
 const db = await connect();
@@ -97,6 +97,8 @@ ok("players view with him: 100% ownership, field = his teams", pvP.stats.field =
 const inT = await searchPlayers(db, p.name, "", t);
 ok("player search within a tournament counts that tournament's teams", inT.length >= 1 && inT[0].teams === (await leaderboard(db, { t, p: p.id })).total && inT[0].teams <= p.teams, `${inT[0]?.name}: ${inT[0]?.teams} in ${t}`);
 
+const su = await searchUsers(db, "KK"), suT = await searchUsers(db, "kk", t);
+ok("user search: part of a name, any case, team counts; scoped to a tournament", su[0]?.username === "kknox20" && su[0].teams === 193 && suT[0]?.username === "kknox20" && suT[0].teams === (await leaderboard(db, { u: "kknox20", t })).total && (await searchUsers(db, "")).length === 0, `${su.map((x) => x.username).join(", ")} · in ${t}: ${suT[0]?.teams}`);
 await db.end();
 console.log(checks.every(Boolean) ? `\nall ${checks.length} checks pass` : `\n${checks.filter((c) => !c).length} FAILED`);
 process.exit(checks.every(Boolean) ? 0 : 1);

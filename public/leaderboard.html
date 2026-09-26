@@ -31,8 +31,9 @@
   <!-- the filters, bbmdb style: tournament (always one — there is no every-team list), user, players a team must have, players it must not -->
   <section class="fcard" aria-label="Filters">
     <div class="f"><label class="lbl" for="fT">Tournament</label><select id="fT" aria-label="Tournament"></select></div>
-    <div class="f"><label class="lbl" for="fU">User</label>
-      <div class="selx"><select id="fU" aria-label="User"><option value="">Any user</option></select><button type="button" id="fUx" aria-label="Clear user" hidden>✕</button></div>
+    <div class="f"><span class="lbl" id="lblU">User</span>
+      <form class="find" id="fU" autocomplete="off"><input type="search" placeholder="DraftKings username…" aria-labelledby="lblU" spellcheck="false" autocapitalize="off"><div class="hits" hidden></div></form>
+      <div class="chips" id="uChips"></div>
     </div>
     <div class="f"><span class="lbl" id="lblP">Rostered players</span>
       <form class="find" id="fP" autocomplete="off"><input type="search" placeholder="Select players…" aria-labelledby="lblP" spellcheck="false"><div class="hits" hidden></div></form>
@@ -136,10 +137,8 @@
     const sel = $("fT");
     sel.replaceChildren(...data.tournaments.map((t) => new Option(`${t.name} (${t.teams.toLocaleString()})`, t.name)));
     sel.value = f.t ?? "";
-    const su = $("fU");
-    su.replaceChildren(new Option("Any user", ""), ...data.users.map((u) => new Option(`${u.name} (${u.teams.toLocaleString()})`, u.name)));
-    su.value = f.u ?? ""; if (f.u && su.value !== f.u) { su.add(new Option(f.u, f.u)); su.value = f.u; } // a name with no teams stays visible so it can be cleared
-    $("fUx").hidden = !f.u;
+    $("uChips").innerHTML = f.u ? `<span class="tag">${esc(f.u)}<button data-clear="u" aria-label="Any user">✕</button></span>` : "";
+    $("fU").hidden = !!f.u; // one user at a time: the box gives way to the chip
     $("pChips").innerHTML = f.p.map((p) => chip(p, "p")).join("");
     $("xChips").innerHTML = f.x.map((p) => chip(p, "x")).join("");
 
@@ -192,7 +191,9 @@
       const got = d.rows ?? [];
       while (d.live && got.length < Math.min(shown, d.total)) got.push(...(await (await fetch(url(got.length, 200))).json()).rows); // pages beyond the first 200
       if (mine !== seq) return; // a newer request has started
-      data = d; rows = got; render();
+      data = d; rows = got;
+      if (!F.t && d.live && d.filter?.t) { F.t = d.filter.t; pushState(); } // the tournament the server opened on sticks: picking a user or player stays inside it
+      render();
     } catch { if (!data) $("rows").innerHTML = `<tr><td class="empty">Could not load the leaderboard — check your connection.</td></tr>`; }
   }
   const set = (changes, { top = true } = {}) => { Object.assign(F, changes); pushState(); load(); if (top) window.scrollTo({ top: 0 }); };
@@ -202,8 +203,8 @@
   const scope = () => ({ u: F.u, t: F.t || data?.filter?.t || "" });
 
   $("fT").addEventListener("change", (e) => set({ t: e.target.value }));
-  $("fU").addEventListener("change", (e) => set({ u: e.target.value }));
-  $("fUx").addEventListener("click", () => set({ u: "" }));
+  // the User box: type part of a username ("kk" → kknox20) and pick it; ✕ on the chip brings every user back
+  window.dkbbSuggest($("fU"), "user", (r) => set({ u: r.username }), () => ({ t: F.t || data?.filter?.t || "" }));
   $("advOnly").addEventListener("change", (e) => set({ adv: e.target.checked ? "1" : "" }, { top: false }));
   $("tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b && b.dataset.tab !== F.tab) set({ tab: b.dataset.tab, sort: "", dir: "" }); });
   $("posPills").addEventListener("click", (e) => { const b = e.target.closest("[data-pos]"); if (b) set({ pos: b.dataset.pos }, { top: false }); });
@@ -212,6 +213,7 @@
   window.dkbbSuggest($("fX"), "player", (r) => addTo("x", r.id), scope);
   document.addEventListener("click", (e) => {
     const b = e.target.closest("[data-clear]"); if (!b) return;
+    if (b.dataset.clear === "u") return set({ u: "" }, { top: false });
     set({ [b.dataset.clear]: ids(b.dataset.clear).filter((id) => id !== b.dataset.id).join(",") }, { top: false });
   });
   $("moreBtn").addEventListener("click", () => { shown += PAGE; load(true); });

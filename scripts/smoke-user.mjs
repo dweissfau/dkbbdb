@@ -57,7 +57,7 @@ ok("clearing the ticks restores every player (the RB pill is still on) and hides
 ok("no script errors", errors.length === 0, errors.slice(0, 3).join(" | "));
 ok("no username search anywhere on the page", !d.querySelector("#find") && ![...d.querySelectorAll("input")].some((i) => /username/i.test(i.placeholder + i.getAttribute("aria-label"))));
 const hdr = { headers: process.env.VERCEL_OIDC_TOKEN ? { "x-vercel-trusted-oidc-idp-token": process.env.VERCEL_OIDC_TOKEN } : {} };
-ok("api: username search is gone", (await (await fetch(`${site}/api/search?type=user&q=kkn`, hdr)).json()).results.length === 0);
+ok("api: username search finds an account from part of its name", (await (await fetch(`${site}/api/search?type=user&q=kkn`, hdr)).json()).results.some((r) => r.username === "kknox20" && r.teams > 0));
 ok("api: player search within the account counts only its teams; without one it counts the whole field", (await (await fetch(`${site}/api/search?type=player&q=justin`, hdr)).json()).results.some((r) => r.teams > 10)
   && (await (await fetch(`${site}/api/search?type=player&q=justin&u=fleaflick`, hdr)).json()).results.every((r) => r.teams <= 10));
 { const b = await (await fetch(`${site}/api/leaderboard?limit=1`, hdr)).json();

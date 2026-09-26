@@ -330,10 +330,6 @@ td.user .pos { margin-right: 4px; }
 .f .find { flex: none; max-width: none; }
 .f.x .find input { border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
 .f.x .find input:focus { outline-color: var(--bad); }
-.selx { position: relative; }
-.selx select { padding-right: 36px; }
-.selx button { position: absolute; right: 22px; top: 50%; transform: translateY(-50%); background: none; border: 0; color: var(--muted); font: inherit; cursor: pointer; padding: 4px 6px; line-height: 1; }
-.selx button:hover { color: var(--ink); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chips:empty { display: none; }
 .tag.x { border-color: rgba(230,103,103,.5); color: #f08a8a; }
