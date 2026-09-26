@@ -66,6 +66,13 @@ try {
   r = await ingestDrafts({ drafts: [tam], last: true }, { sender: SENDER });
   ok("a tampered re-upload changes nothing that is stored", (await stored()) === was, `accepted as ${r.drafts} draft, rosters / names / contest identical`);
 
+  // 5b. a sync's chunks are buffered: the first chunk writes nothing, the last chunk writes the account file once
+  const tag0 = (await getGz(PATHS.account(zb.k))).etag;
+  r = await ingestDrafts({ drafts: [clone(base)], last: false }, { sender: SENDER + "-chunks", last: false });
+  ok("a middle chunk is buffered, no file written", r.buffered === true && r.drafts === 1 && (await getGz(PATHS.account(zb.k))).etag === tag0);
+  r = await ingestDrafts({ drafts: [], last: true }, { sender: SENDER + "-chunks", last: true });
+  ok("the last chunk writes the buffered drafts in one go", r.drafts === 1 && (await getGz(PATHS.account(zb.k))).etag !== tag0 && (await stored()) === was, `${r.drafts} draft written`);
+
   // 6. player lists cannot be overwritten
   const dg = base.contest.DraftGroupId, did = made[0][1];
   const nameOf = async () => (await getGz(PATHS.group(dg)))?.value?.players?.[did]?.[1];

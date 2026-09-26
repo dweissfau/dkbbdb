@@ -67,9 +67,9 @@ export default async function handler(req, res) {
 
     // the overview
     const store = await loadStore();
-    const uploads = await allUploads(40);
+    const uploads = await allUploads(40, { store });
     const perKey = new Map();
-    for (const u of uploads) for (const k of u.userKeys ?? []) { const p = perKey.get(k) ?? { uploads: 0, rejected: 0, ext: null }; p.uploads++; p.rejected += u.rejected ?? 0; p.ext ??= u.ext; perKey.set(k, p); }
+    for (const u of await allUploads(5000, { store })) for (const k of u.userKeys ?? []) { const p = perKey.get(k) ?? { uploads: 0, rejected: 0, ext: null }; p.uploads++; p.rejected += u.rejected ?? 0; p.ext ??= u.ext; perKey.set(k, p); }
     const accounts = (store?.accounts ?? []).map((a) => {
       const mine = Object.entries(store.entries).filter(([, e]) => e.u === a.k);
       const fees = mine.reduce((s, [, e]) => s + (store.contests[e.cid]?.buyIn ?? 0), 0);

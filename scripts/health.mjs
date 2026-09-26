@@ -2,7 +2,7 @@
 // newest backup into .blob/, or scripts/migrate-local.mjs):   node scripts/health.mjs
 //   • accounts, teams, leagues, the store file's size and age
 //   • rostered players with no match in the public stats feed (they score 0 until aliased in db/sleeper-aliases.json)
-//   • uploads that had drafts rejected, and the busiest senders
+//   • syncs that had drafts rejected, and the busiest accounts
 import fs from "node:fs";
 import path from "node:path";
 import { ROOT } from "./db.mjs";
@@ -32,8 +32,8 @@ if (unmatched.length) {
   for (const u of unmatched.sort((a, b) => (counts.get(b.pid) ?? 0) - (counts.get(a.pid) ?? 0))) console.log(`   ${u.name} (${u.pos} ${u.team}) on ${counts.get(u.pid) ?? 0} rosters`);
 } else console.log(`every rostered player (${rosteredPlayers(store).length}) is matched to the stats feed`);
 
-const uploads = await allUploads(2000);
+const uploads = await allUploads(2000, { store });
 const rejected = uploads.filter((u) => u.rejected > 0);
 if (rejected.length) { console.log(`\n${rejected.length} upload(s) had drafts rejected:`); for (const u of rejected.slice(0, 10)) console.log(`   ${u.at} ${u.usernames.join(",") || "?"} rejected ${u.rejected}: ${u.note ?? ""}`); }
-const bySender = new Map(); for (const u of uploads) bySender.set(u.sender, (bySender.get(u.sender) ?? 0) + 1);
-console.log(`\n${uploads.length} uploads from ${bySender.size} senders; busiest: ${[...bySender.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([s, n]) => `${s.slice(0, 8)}… ×${n}`).join(", ")}`);
+const byUser = new Map(); for (const u of uploads) byUser.set(u.usernames?.[0] ?? "?", (byUser.get(u.usernames?.[0] ?? "?") ?? 0) + 1);
+console.log(`\n${uploads.length} syncs from ${byUser.size} accounts; busiest: ${[...byUser.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([s, n]) => `${s} ×${n}`).join(", ")}`);
