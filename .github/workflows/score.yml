@@ -1,0 +1,34 @@
+# Scores dkbbdb's board off the site (scripts/score.mjs) and hands it to https://dkbbdb.com/api/board.
+# Schedules are UTC. Windows cover NFL game time in Eastern time with an hour to spare for daylight saving:
+#   Sunday 1 pm – midnight ET       every 5 min      (17:00–23:59 UTC Sun + 00:00–04:59 UTC Mon)
+#   Sunday / Monday / Thursday night games            (00:00–04:59 UTC Mon / Tue / Fri)
+#   every day 6 am ET                                 (stat corrections, the morning board)
+# A run costs about a minute of Actions time; a private repo has 2,000 free minutes a month, a public one unlimited.
+name: score
+on:
+  schedule:
+    - cron: "*/5 17-23 * * 0"
+    - cron: "*/5 0-4 * * 1"
+    - cron: "*/5 0-4 * * 2"
+    - cron: "*/5 0-4 * * 5"
+    - cron: "0 10 * * *"
+  workflow_dispatch:
+concurrency:
+  group: score
+  cancel-in-progress: false
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --omit=dev
+      - run: node scripts/score.mjs
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          DKBBDB_SITE: ${{ vars.DKBBDB_SITE || 'https://dkbbdb.com' }}
