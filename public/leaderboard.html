@@ -33,7 +33,6 @@
     <div class="f"><label class="lbl" for="fT">Tournament</label><select id="fT" aria-label="Tournament"></select></div>
     <div class="f"><span class="lbl" id="lblU">User</span>
       <form class="find" id="fU" autocomplete="off"><input type="search" placeholder="DraftKings username…" aria-labelledby="lblU" spellcheck="false" autocapitalize="off"><div class="hits" hidden></div></form>
-      <div class="chips" id="uChips"></div>
     </div>
     <div class="f"><span class="lbl" id="lblP">Rostered players</span>
       <form class="find" id="fP" autocomplete="off"><input type="search" placeholder="Select players…" aria-labelledby="lblP" spellcheck="false"><div class="hits" hidden></div></form>
@@ -137,8 +136,7 @@
     const sel = $("fT");
     sel.replaceChildren(...data.tournaments.map((t) => new Option(`${t.name} (${t.teams.toLocaleString()})`, t.name)));
     sel.value = f.t ?? "";
-    $("uChips").innerHTML = f.u ? `<span class="tag">${esc(f.u)}<button data-clear="u" aria-label="Any user">✕</button></span>` : "";
-    $("fU").hidden = !!f.u; // one user at a time: the box gives way to the chip
+    { const q = $("fU").querySelector("input"); if (document.activeElement !== q && q.value !== (f.u ?? "")) q.value = f.u ?? ""; } // the box shows the chosen user (not while typing)
     $("pChips").innerHTML = f.p.map((p) => chip(p, "p")).join("");
     $("xChips").innerHTML = f.x.map((p) => chip(p, "x")).join("");
 
@@ -203,8 +201,13 @@
   const scope = () => ({ u: F.u, t: F.t || data?.filter?.t || "" });
 
   $("fT").addEventListener("change", (e) => set({ t: e.target.value }));
-  // the User box: type part of a username ("kk" → kknox20) and pick it; ✕ on the chip brings every user back
-  window.dkbbSuggest($("fU"), "user", (r) => set({ u: r.username }), () => ({ t: F.t || data?.filter?.t || "" }));
+  // the User box: type part of a username ("kk" → kknox20), pick it and the full name stays in the box; emptying the
+  // box (its ✕, or deleting the text) brings every user back; text left half-typed goes back to the chosen name
+  { const q = $("fU").querySelector("input");
+    window.dkbbSuggest($("fU"), "user", (r) => { q.value = r.username; set({ u: r.username }); }, () => ({ t: F.t || data?.filter?.t || "" }));
+    q.addEventListener("input", () => { if (!q.value.trim() && F.u) set({ u: "" }, { top: false }); });
+    q.addEventListener("search", () => { if (!q.value.trim() && F.u) set({ u: "" }, { top: false }); }); // the native ✕ of a search box
+    q.addEventListener("blur", () => setTimeout(() => { if (document.activeElement !== q && q.value !== F.u) q.value = F.u; }, 250)); }
   $("advOnly").addEventListener("change", (e) => set({ adv: e.target.checked ? "1" : "" }, { top: false }));
   $("tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b && b.dataset.tab !== F.tab) set({ tab: b.dataset.tab, sort: "", dir: "" }); });
   $("posPills").addEventListener("click", (e) => { const b = e.target.closest("[data-pos]"); if (b) set({ pos: b.dataset.pos }, { top: false }); });
@@ -213,7 +216,6 @@
   window.dkbbSuggest($("fX"), "player", (r) => addTo("x", r.id), scope);
   document.addEventListener("click", (e) => {
     const b = e.target.closest("[data-clear]"); if (!b) return;
-    if (b.dataset.clear === "u") return set({ u: "" }, { top: false });
     set({ [b.dataset.clear]: ids(b.dataset.clear).filter((id) => id !== b.dataset.id).join(",") }, { top: false });
   });
   $("moreBtn").addEventListener("click", () => { shown += PAGE; load(true); });

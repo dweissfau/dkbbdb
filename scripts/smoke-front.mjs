@@ -33,10 +33,10 @@ ok("updated line", /pdated \d+/.test(d.getElementById("liveNote").textContent), 
 ok("cut-line chip on the top row", /Advancing|Out by|Not started/.test(rows()[0]?.textContent ?? ""), rows()[0]?.textContent.replace(/\s+/g, " ").slice(0, 110));
 const kk = await pick("fU", "kk");
 const tour = d.getElementById("fT").value;
-ok("typing part of a username suggests it; picking it shows only that user's teams as a chip", /kknox20/.test(kk) && rows().length > 0 && rows().every((r) => r.querySelector("[data-user]").textContent === "kknox20") && d.querySelector("#uChips .tag")?.textContent.includes("kknox20") && d.getElementById("fU").hidden && w.location.search.includes("u=kknox20"), `${kk.replace(/\s+/g, " ")} → ${count()} teams`);
+ok("typing part of a username suggests it; picking it fills the box with the full name and shows only that user's teams", /kknox20/.test(kk) && rows().length > 0 && rows().every((r) => r.querySelector("[data-user]").textContent === "kknox20") && d.querySelector("#fU input").value === "kknox20" && !d.getElementById("fU").hidden && w.location.search.includes("u=kknox20"), `${kk.replace(/\s+/g, " ")} → ${count()} teams`);
 ok("the tournament stays selected when a user is picked (150 of kknox20's 193 are in the $20M)", d.getElementById("fT").value === tour && count() < 193 && w.location.search.includes("t="), `${count()} teams in ${tour}`);
-click(d.querySelector("#uChips [data-clear]")); await wait();
-ok("clearing the user chip brings the field back and the box", !d.querySelector("#uChips .tag") && !d.getElementById("fU").hidden && !w.location.search.includes("u="), `${count()} teams`);
+{ const q = d.querySelector("#fU input"); q.value = ""; q.dispatchEvent(new w.Event("input", { bubbles: true })); } await wait();
+ok("emptying the box brings the field back", !w.location.search.includes("u=") && count() > 150, `${count()} teams`);
 const before = count();
 const who = await pick("fP", "justin jefferson");
 ok("rostered player → chip + fewer teams + numbers line", d.querySelectorAll("#pChips .tag").length === 1 && count() < before && count() > 0 && !d.getElementById("active").hidden && /have /.test(d.getElementById("active").textContent) && w.location.search.includes("p="), `${who.replace(/\s+/g, " ")} → ${count()} of ${before}`);
