@@ -10,14 +10,14 @@ import { ROOT, loadEnv } from "./db.mjs";
 const args = process.argv.slice(2), site = args.find((a) => a.startsWith("http")) ?? "https://dkbbdb.com";
 const dir = args.find((a) => !a.startsWith("http")) ?? path.join(ROOT, "backups", fs.readdirSync(path.join(ROOT, "backups")).filter((d) => /^\d{4}-/.test(d) && fs.existsSync(path.join(ROOT, "backups", d, "entries.json.gz"))).sort().at(-1));
 const key = process.env.ADMIN_KEY ?? loadEnv().ADMIN_KEY;
-const MAX = 3_000_000; // bytes of base64 per request
+const MAX_RAW = 5_000_000; // bytes of JSON per request (gzip'd + base64 it lands well under Vercel's 4.5 MB body limit)
 console.log(`from ${dir} → ${site}`);
 for (const f of fs.readdirSync(dir).filter((f) => f.endsWith(".json.gz"))) {
   const table = f.replace(/\.json\.gz$/, ""), rows = JSON.parse(gunzipSync(fs.readFileSync(path.join(dir, f))).toString());
   if (table === "board_cache") continue; // recomputed
-  // split into parts that fit
-  const parts = []; let cur = [];
-  for (const r of rows) { cur.push(r); if (gzipSync(Buffer.from(JSON.stringify(cur))).length * 1.37 > MAX && cur.length > 1) { parts.push(cur.slice(0, -1)); cur = [r]; } }
+  // split into parts that fit (by raw JSON size — gzipping the running total per row was quadratic)
+  const parts = []; let cur = [], size = 0;
+  for (const r of rows) { const n = JSON.stringify(r).length; if (cur.length && size + n > MAX_RAW) { parts.push(cur); cur = []; size = 0; } cur.push(r); size += n; }
   if (cur.length || !parts.length) parts.push(cur);
   for (let i = 0; i < parts.length; i++) {
     const body = gzipSync(Buffer.from(JSON.stringify(parts[i]))).toString("base64");
