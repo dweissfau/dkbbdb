@@ -5,6 +5,7 @@
 import { db } from "../lib/db.js";
 import { senderHash } from "../lib/guard.js";
 import { storeCaptures } from "../lib/payouts.js";
+import { publishStore } from "../lib/store.js";
 
 export const config = { maxDuration: 30 };
 
@@ -17,5 +18,6 @@ export default async function handler(req, res) {
   if (!Array.isArray(body.tournaments)) return res.status(400).json({ error: "tournaments[] expected" });
   const out = await storeCaptures(db(), body.tournaments, { sender: senderHash(req) });
   if (out.limited) return res.status(429).json({ error: out.limited });
-  res.status(200).json({ ok: true, tournaments: out });
+  let published = null; try { published = await publishStore(db()); } catch (e) { published = { error: String(e?.message ?? e) }; } // ladders live in the store file
+  res.status(200).json({ ok: true, tournaments: out, published });
 }

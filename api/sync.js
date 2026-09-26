@@ -8,6 +8,7 @@ import { senderHash } from "../lib/guard.js";
 import { ingestDrafts } from "../lib/ingest.js";
 import { mapSleeper } from "../lib/sleeper.js";
 import aliases from "../db/sleeper-aliases.json" with { type: "json" };
+import { publishStore } from "../lib/store.js";
 
 export const config = { maxDuration: 60 };
 
@@ -26,6 +27,8 @@ export default async function handler(req, res) {
   if (body.last !== false && out.drafts) {
     try { const m = await mapSleeper(db(), { aliases }); out.mapped = m.mapped; out.unmatched = m.unmatched.map((u) => u.name); }
     catch (e) { out.errors.push("stats matching: " + String(e?.message ?? e)); }
+    // the store file (lib/store.js) is what the pages score from: rebuild it with the new teams in
+    try { out.published = await publishStore(db()); } catch (e) { out.errors.push("publish: " + String(e?.message ?? e)); }
   }
   res.status(200).json({ ok: true, ...out });
 }

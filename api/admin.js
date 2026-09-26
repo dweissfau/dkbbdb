@@ -4,6 +4,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { db } from "../lib/db.js";
 import { shortContest } from "../lib/leaderboard.js";
+import { publishStore } from "../lib/store.js";
 
 const same = (a, b) => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 
@@ -12,6 +13,9 @@ export default async function handler(req, res) {
   const key = process.env.ADMIN_KEY ?? "", given = String(req.headers["x-admin-key"] ?? req.query.key ?? "");
   if (!key || !given || !same(key, given)) return res.status(401).json({ error: "unauthorized" });
   const d = db();
+  if (req.query.publish === "1") { // rebuild the store file from the database (lib/store.js) — the owner's manual trigger
+    try { return res.status(200).json({ ok: true, published: await publishStore(d) }); } catch (e) { return res.status(500).json({ error: String(e?.message ?? e) }); }
+  }
   const accounts = (await d.query(
     `select a.username, a.created_at, a.synced_at,
             count(e.entry_id)::int teams, coalesce(sum(c.buy_in), 0)::float fees, count(distinct c.name)::int tournaments,
