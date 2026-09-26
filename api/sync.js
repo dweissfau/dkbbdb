@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   if (!Array.isArray(body.drafts)) return res.status(400).json({ error: "drafts[] expected" });
   if (body.drafts.length > 300) return res.status(413).json({ error: "at most 300 drafts per upload" });
 
-  const out = await ingestDrafts(body, { sender: senderHash(req), ext: req.headers["x-dkbbdb-extension"] });
+  const out = await ingestDrafts(body, { sender: senderHash(req), ext: req.headers["x-dkbbdb-extension"], last: body.last !== false });
   if (out.limited) return res.status(429).json({ error: out.limited });
   // body.last marks the final chunk of a sync: do the slower follow-up once, there
   if (body.last !== false && out.drafts) {
