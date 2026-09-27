@@ -15,7 +15,6 @@
 <div class="bar pbar"><div class="in">
   <a class="brand" href="/">dkbbdb</a>
   <div class="spacer"></div>
-  <form class="find ufind" id="fU" autocomplete="off"><input type="search" placeholder="Find a username…" aria-label="Find a username" spellcheck="false" autocapitalize="off"><div class="hits" hidden></div></form>
   <!-- a browser that never synced gets "Add your teams"; one that has (dkbbdb-me) gets a link to its own page on anyone else's, nothing on its own -->
   <a class="btn primary" id="navAdd" href="/#add">Add your teams</a>
   <a class="btn mine" id="navMine" href="/" hidden>My teams</a>
@@ -308,10 +307,6 @@
   }
   const set = (changes) => { Object.assign(F, changes); pushState(); load(); };
   const pids = () => F.p.split(",").filter(Boolean);
-
-  // the nav's username box: a suggestion picks that account's page; Enter with nothing suggested tries the name as typed
-  window.dkbbSuggest($("fU"), "user", (r) => { location.href = "/u/" + encodeURIComponent(r.username); });
-  $("fU").addEventListener("submit", () => { const q = $("fU").querySelector("input").value.trim(); if (q && $("fU").querySelector(".hits").hidden) location.href = "/u/" + encodeURIComponent(q); });
 
   $("fT").addEventListener("change", (e) => set({ t: e.target.value }));
   const tOpen = (open) => { const l = $("tList"); if (!l) return; l.hidden = !open; $("tBtn").setAttribute("aria-expanded", String(open)); };

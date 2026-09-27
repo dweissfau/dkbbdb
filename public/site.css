@@ -230,13 +230,10 @@ td.user .pos { margin-right: 4px; }
 .profile, .pbar { --card: #1a1a19; --tile: #141413; --hover: #202020; --dis: #5a5955; --green: #3fcf94; --green-bg: rgba(25,158,112,.16);
   --red: #e66767; --red-bg: rgba(230,103,103,.16); --amber: #f0b83c; --amber-bg: rgba(240,184,60,.16); font-variant-numeric: tabular-nums; }
 
-/* 1. nav: 56px, inner 1080 column — wordmark · (space) · 240×36 username box · "Add your teams" pill */
+/* 1. nav: 56px, inner 1080 column — wordmark · (space) · "Add your teams" pill (or "My teams", or nothing — see u.html) */
 .pbar { position: static; display: block; padding: 0; }
 .pbar .in { max-width: calc(1080px + 32px); margin: 0 auto; height: 56px; display: flex; align-items: center; gap: 20px; padding: 0 16px; }
 .pbar .brand { font-size: 17px; letter-spacing: 0; }
-.pbar .ufind { flex: 0 1 240px; }
-.pbar .ufind input { height: 36px; padding: 0 14px; font-size: 14px; background: transparent; border-color: var(--line); border-radius: 8px; }
-.pbar .ufind input::placeholder { color: var(--muted); }
 .pbar .btn.primary { height: 36px; padding: 0 16px; border-radius: 999px; display: inline-flex; align-items: center; font-weight: 600; }
 .pbar .btn.primary:hover { filter: brightness(1.1); background: var(--accent); }
 .pbar .btn.mine { height: 36px; padding: 0 16px; border-radius: 999px; display: inline-flex; align-items: center; font-weight: 600; color: var(--ink-2); border-color: var(--line); }
@@ -332,9 +329,6 @@ body.ticks .profile .card:not(.xp) tr { grid-template-columns: 22px 40px minmax(
 
 @media (max-width: 640px) {
   .pbar .in { gap: 8px; padding: 0 12px; }
-  .pbar .spacer { display: none; }
-  .pbar .ufind { flex: 1 1 auto; }
-  .pbar .ufind input { font-size: 16px; }
   .pbar .btn.primary { padding: 0 12px; font-size: 13px; }
   main.profile { padding: 14px 10px 32px; }
   .profile h1 { font-size: 22px; }
