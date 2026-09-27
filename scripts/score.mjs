@@ -14,7 +14,9 @@ import { filesDir, getGz, putGz } from "../lib/files.js";
 import { PATHS, _forgetStore } from "../lib/store.js";
 
 const site = (process.env.DKBBDB_SITE ?? "https://dkbbdb.com").replace(/\/$/, ""), secret = process.env.CRON_SECRET ?? "";
-const PIECE = 3_000_000, t0 = Date.now();
+// a POSTed piece is parked in the site's runtime cache until its siblings arrive, and an item there holds ~2 MB —
+// 3 MB pieces were dropped silently once the totals file outgrew one piece (2026-09-27)
+const PIECE = 1_400_000, t0 = Date.now();
 const auth = { authorization: `Bearer ${secret}` };
 const log = (m) => console.log(`[${((Date.now() - t0) / 1000).toFixed(1)}s] ${m}`);
 

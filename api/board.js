@@ -16,7 +16,8 @@ import { rcMark, rcRead, rcDrop, rcPut } from "../lib/rcache.js";
 
 export const config = { maxDuration: 60, api: { bodyParser: { sizeLimit: "4.5mb" } } };
 const same = (a, b) => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
-const PIECE = 3_000_000, PIECE_S = 600;
+const PIECE = 3_000_000, PIECE_S = 600; // served pieces (straight from memory) may be 3 MB; a POSTed piece is parked in the runtime cache, whose items hold ~2 MB
+const PIECE_IN = 1_500_000;
 let pulled = null; // { etag, gz } — the store file, gzip'd + base64 once per version
 
 export default async function handler(req, res) {
@@ -47,7 +48,8 @@ export default async function handler(req, res) {
     try { body = typeof req.body === "string" ? JSON.parse(req.body) : req.body ?? {}; } catch { return res.status(400).json({ error: "not JSON" }); }
     const { stamp, part, parts, gz } = body, kind = body.kind ?? "board";
     if (!["board", "prior"].includes(kind) || !/^[a-z0-9]{4,32}$/.test(String(stamp)) || !Number.isInteger(part) || !Number.isInteger(parts) || part < 0 || part >= parts || parts > 40 || typeof gz !== "string" || !gz) return res.status(400).json({ error: "expected { kind?, stamp, part, parts, gz }" });
-    await rcMark(`boardin:${stamp}:${part}`, { gz }, PIECE_S);
+    if (parts > 1 && gz.length > PIECE_IN) return res.status(413).json({ error: `a piece may hold ${PIECE_IN} characters (the runtime cache parks it) — send smaller pieces` });
+    if (parts > 1 && !(await rcMark(`boardin:${stamp}:${part}`, { gz }, PIECE_S))) return res.status(503).json({ error: "could not park the piece — try again" });
     const have = []; // which pieces are in: the last request to find them all assembles the payload
     for (let i = 0; i < parts; i++) have.push(i === part ? { gz } : await rcRead(`boardin:${stamp}:${i}`));
     if (have.some((p) => !p?.gz)) return res.status(202).json({ ok: true, waiting: have.filter((p) => !p?.gz).length });

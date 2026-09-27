@@ -26,6 +26,7 @@ try {
   ok("no secret → 401", (await call("POST", { stamp: "abc123", part: 0, parts: 1, gz: "x" }, "Bearer wrong")).status === 401);
   ok("garbage → 400", (await call("POST", { stamp: "abc123", part: 0, parts: 1, gz: Buffer.from("nope").toString("base64") })).status === 400 || (await call("POST", {})).status === 400);
   const gz = gzipSync(Buffer.from(JSON.stringify(board))).toString("base64"), half = Math.ceil(gz.length / 2);
+  ok("a piece too big for the runtime cache → 413 (never dropped silently)", (await call("POST", { stamp: "big001", part: 0, parts: 2, gz: "A".repeat(1_500_001) })).status === 413);
   const first = await call("POST", { stamp: "stamp1", part: 0, parts: 2, gz: gz.slice(0, half) });
   ok("first of two pieces → 202, waiting for one", first.status === 202 && first.body.waiting === 1, JSON.stringify(first.body));
   const second = await call("POST", { stamp: "stamp1", part: 1, parts: 2, gz: gz.slice(half) });
