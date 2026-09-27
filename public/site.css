@@ -284,9 +284,10 @@ main.profile { max-width: calc(1080px + 32px); padding: 20px 16px 32px; }
 /* the week menu sits after the divider, its list opens under its left edge */
 .wmenu { order: 0; }
 .wmenu .menu { right: auto; left: 0; min-width: 180px; }
-/* Exposure tab on a desktop: the name box sits before the tournament menu, pill-shaped like it */
-.profile .head #fQ { flex: 0 1 240px; }
-.profile .head #fQ input { height: 36px; padding: 0 14px; font-size: 13px; border-radius: 999px; background: none; }
+/* the search box before the tournament menu, pill-shaped like it: Teams tab = teams with a player, Exposure tab = a name or NFL team */
+.profile .head #fP, .profile .head #fQ { flex: 0 1 240px; }
+.profile .head #fP input, .profile .head #fQ input { height: 36px; padding: 0 14px; font-size: 13px; border-radius: 999px; background: none; }
+.profile .head #fP .hits { min-width: 320px; }
 /* what the filters are doing: ticked-teams pills + chips, between the controls and the table */
 .subrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: -2px; }
 .subrow .active { margin: 0; }
@@ -325,7 +326,7 @@ body.ticks .profile .card:not(.xp) tr { grid-template-columns: 22px 40px minmax(
 /* phone-only controls stay out of the way on a desktop: the funnel button, the sheet's own rows (tournament select,
    player box, Advancing only, sort menu) — the tournament menu and the column headers do those jobs there */
 .tools { display: contents; }
-.tools .sheethead, .tools .sortwrap, .tools #fT, .tools #fP, .tools #advWrap, #filterBtn, #toolsVeil { display: none; }
+.tools .sheethead, .tools .sortwrap, .tools #fT, .tools #advWrap, #filterBtn, #toolsVeil { display: none; }
 #filterBtn { position: relative; padding: 6px 9px; line-height: 0; }
 #filterBtn.on::after { content: ""; position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
 
@@ -359,14 +360,14 @@ body.ticks .profile .card:not(.xp) tr { grid-template-columns: 22px 40px minmax(
   #toolsVeil:not([hidden]) { display: block; }
   .tools { display: flex; flex-direction: column; gap: 12px; position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: var(--surface); border-top: 1px solid var(--line); border-radius: 16px 16px 0 0; padding: 14px 16px calc(18px + env(safe-area-inset-bottom)); transform: translateY(105%); transition: transform .22s ease-out; }
   body.tools-open .tools { transform: none; }
-  .tools .sheethead, .tools .sortwrap, .tools #fT, .tools #fP, .tools #advWrap { display: flex; }
+  .tools .sheethead, .tools .sortwrap, .tools #fT, .tools #advWrap { display: flex; }
   .tools .sheethead { align-items: center; justify-content: space-between; font-size: 16px; }
   .tools .sortwrap { align-items: center; gap: 10px; color: var(--ink-2); font-size: 14px; }
   .tools .sortwrap select { flex: 1; }
   .tools select, .tools .find input { width: 100%; padding: 10px 12px; font-size: 16px; border-radius: 9px; border: 1px solid var(--line); background: var(--page); color: var(--ink); font: inherit; font-size: 16px; }
   .tools .find, .tools select { flex: none; max-width: none; }
-  .profile .head #fQ { flex: none; }
-  .profile .head #fQ input { height: auto; border-radius: 9px; background: var(--page); }
+  .profile .head #fP, .profile .head #fQ { flex: none; }
+  .profile .head #fP input, .profile .head #fQ input { height: auto; border-radius: 9px; background: var(--page); }
   .tools .hits { top: auto; bottom: calc(100% + 4px); }
   .tools .check { font-size: 15px; }
   .tools .check input { width: 18px; height: 18px; }
