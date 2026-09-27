@@ -16,7 +16,9 @@
   <a class="brand" href="/">dkbbdb</a>
   <div class="spacer"></div>
   <form class="find ufind" id="fU" autocomplete="off"><input type="search" placeholder="Find a username…" aria-label="Find a username" spellcheck="false" autocapitalize="off"><div class="hits" hidden></div></form>
-  <a class="btn primary" href="/#add">Add your teams</a>
+  <!-- a browser that never synced gets "Add your teams"; one that has (dkbbdb-me) gets a link to its own page on anyone else's, nothing on its own -->
+  <a class="btn primary" id="navAdd" href="/#add">Add your teams</a>
+  <a class="btn mine" id="navMine" href="/" hidden>My teams</a>
 </div></div>
 <main class="profile">
   <header class="who">
@@ -105,8 +107,12 @@
   $("name").textContent = who; document.title = `${who} · dkbbdb`;
   // arriving from the extension (/?u=<name> → here with ?u=): this is the visitor's own account — the home page links back to it
   if ((new URLSearchParams(location.search).get("u") ?? "").trim().toLowerCase() === who.toLowerCase()) { try { localStorage.setItem("dkbbdb-me", who); } catch { /* private window */ } }
-  const remember = (name) => { try { localStorage.setItem("dkbbdb-me", name); } catch { /* private window */ } };
-  const isMe = () => { try { return (localStorage.getItem("dkbbdb-me") ?? "").toLowerCase() === who.toLowerCase(); } catch { return false; } };
+  const myName = () => { try { return localStorage.getItem("dkbbdb-me") ?? ""; } catch { return ""; } };
+  const isMe = () => myName().toLowerCase() === who.toLowerCase();
+  // the nav's right end: "Add your teams" only for a browser that has not synced; otherwise a way back to its own page
+  const navMe = () => { const me = myName(); $("navAdd").hidden = !!me; $("navMine").hidden = !me || isMe(); if (me) $("navMine").href = "/u/" + encodeURIComponent(me); };
+  const remember = (name) => { try { localStorage.setItem("dkbbdb-me", name); } catch { /* private window */ } navMe(); };
+  navMe();
 
   // the view lives in the address: /u/<name>?tab=exposure &t=tournament &w=week|po &p=playerId[,id…] &adv=1 &pos=QB &q=name &sort=&dir= &team=entryId
   const sp = new URLSearchParams(location.search);
@@ -343,7 +349,7 @@
   $("toolsVeil").addEventListener("click", () => sheet(false));
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") { if ($("toolsVeil")) sheet(false); tOpen(false); } });
   if (location.hash === "#filters") sheet(true);
-  $("forgetLink").addEventListener("click", () => { try { localStorage.removeItem("dkbbdb-me"); } catch { /* private window */ } });
+  $("forgetLink").addEventListener("click", () => { try { localStorage.removeItem("dkbbdb-me"); } catch { /* private window */ } navMe(); });
   $("moreBtn").addEventListener("click", () => { shown += PAGE; load(true); });
   // column headers sort; clicking the active one flips the direction
   const sortClick = (th) => { const k = th.dataset.sort; set({ sort: k, dir: data?.sort === k ? (data.dir === "asc" ? "desc" : "asc") : ASC_FIRST.has(k) ? "asc" : "desc" }); };
