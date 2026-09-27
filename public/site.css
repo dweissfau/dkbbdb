@@ -281,7 +281,11 @@ main.profile { max-width: calc(1080px + 32px); padding: 20px 16px 32px; }
 .menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; min-width: 280px; max-width: min(460px, calc(100vw - 32px)); max-height: 60vh; overflow-y: auto; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 4px; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
 .menu button { display: flex; justify-content: space-between; gap: 12px; width: 100%; padding: 8px 10px; border: 0; border-radius: 6px; background: none; color: var(--ink); font: inherit; font-size: 13px; text-align: left; cursor: pointer; white-space: nowrap; }
 .menu button:hover, .menu button.on { background: var(--hover); }
+.menu button:disabled { color: var(--dis); cursor: default; background: none; }
 .menu button span { color: var(--muted); font-family: var(--mono); }
+/* the week menu sits after the divider, its list opens under its left edge */
+.wmenu { order: 0; }
+.wmenu .menu { right: auto; left: 0; min-width: 180px; }
 /* Exposure tab on a desktop: the name box sits before the tournament menu, pill-shaped like it */
 .profile .head #fQ { flex: 0 1 240px; }
 .profile .head #fQ input { height: 36px; padding: 0 14px; font-size: 13px; border-radius: 999px; background: none; }
@@ -343,6 +347,7 @@ body.ticks .profile .card:not(.xp) tr { grid-template-columns: 22px 40px minmax(
   .profile #tabs .pill { flex: 1; height: 34px; border: 0; border-radius: 7px; padding: 0; justify-content: center; font-size: 14px; }
   .profile #tabs .pill:not(.on) { color: var(--muted); }
   .vr, .profile .head .spacer, .profile .head .note, .tmenu { display: none; }
+  .tmenu.wmenu { display: block; flex-basis: 100%; order: 9; }
   .weeks { flex-basis: 100%; order: 9; overflow-x: auto; scrollbar-width: none; }
   .wk { height: 30px; padding: 0 10px; }
   #filterBtn { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 40px; padding: 0; border-radius: 9px; flex: none; }

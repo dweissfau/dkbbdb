@@ -33,8 +33,11 @@
         <button class="pill" data-tab="exposure" role="tab">Player exposure</button>
       </div>
       <span class="vr" aria-hidden="true"></span>
-      <!-- Teams tab: the week chips (the standing as of a finished week; Playoffs once they start) -->
-      <div class="weeks" id="weeks" role="group" aria-label="Week"></div>
+      <!-- Teams tab: the week menu — this week by default; a finished week = the standing as of it; Playoffs once they start -->
+      <div class="tmenu wmenu" id="wMenu">
+        <button class="tbtn" id="wBtn" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="tl">Week</span><span aria-hidden="true">▾</span></button>
+        <div class="menu" id="wList" role="listbox" aria-label="Week" hidden></div>
+      </div>
       <!-- Exposure tab: position chips in the same slot -->
       <div class="weeks" id="posPills" role="group" aria-label="Position" hidden>
         <button class="wk on" data-pos="">All</button><button class="wk" data-pos="QB">QB</button><button class="wk" data-pos="RB">RB</button><button class="wk" data-pos="WR">WR</button><button class="wk" data-pos="TE">TE</button>
@@ -199,14 +202,16 @@
       ["Best team", best ? pts(best.points) : "—", best ? `${shortName(best.contest)}${best.rank != null ? ` · ${best.rank}/${best.entrants}` : ""}` : ""]];
     $("tiles").innerHTML = tiles.map(([k, v, tip]) => `<div class="tile"${tip ? ` title="${esc(tip)}"` : ""}><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
   }
-  // the week chips: every week of the season so far (a finished week the site has on file can be picked — the standing
-  // as of it; this week is the season as it stands), then Playoffs, disabled until a team is in a playoff round
+  // the week menu: every week of the season so far (a finished week the site has on file can be picked — the standing
+  // as of it; this week, the default, is the season as it stands), then Playoffs, greyed until a team is in a playoff round
   function renderWeeks(P) {
     const cur = data.week, have = new Set(data.weeks ?? []), sel = data.w === "po" ? "po" : data.w ?? cur;
-    const chips = [];
-    for (let w = 1; w <= cur; w++) chips.push([String(w), w === cur ? `Wk ${w} · live` : `Wk ${w}`, w === cur || have.has(w), sel === w, w === cur ? "this week — the season as it stands" : have.has(w) ? `the standing as of week ${w}` : `week ${w} is not on file yet`]);
-    chips.push(["po", "Playoffs", !!P.playoffs, sel === "po", P.playoffs ? "the playoff rounds" : "the playoffs have not started"]);
-    $("weeks").innerHTML = chips.map(([v, label, on, isSel, tip]) => `<button type="button" class="wk${isSel ? " on" : ""}" data-w="${v}"${on ? "" : " disabled"} title="${esc(tip)}" aria-pressed="${isSel}">${label}</button>`).join("");
+    const opts = [];
+    for (let w = 1; w <= cur; w++) opts.push([String(w), w === cur ? `Wk ${w} · live` : `Wk ${w}`, w === cur || have.has(w), sel === w, w === cur ? "this week — the season as it stands" : have.has(w) ? `the standing as of week ${w}` : `week ${w} is not on file yet`]);
+    opts.push(["po", "Playoffs", !!P.playoffs, sel === "po", P.playoffs ? "the playoff rounds" : "the playoffs have not started"]);
+    $("wList").innerHTML = opts.map(([v, label, on, isSel, tip]) => `<button type="button" role="option" data-w="${v}"${on ? "" : " disabled"} title="${esc(tip)}" aria-selected="${isSel}"${isSel ? ' class="on"' : ""}>${label}</button>`).join("");
+    $("wBtn").querySelector(".tl").textContent = opts.find(([, , , isSel]) => isSel)?.[1] ?? `Wk ${cur}`;
+    $("wBtn").classList.toggle("on", sel !== cur);
   }
 
   function render() {
@@ -230,7 +235,7 @@
     $("tBtn").querySelector(".tl").textContent = `Tournament · ${F.t ? shortName(F.t) : "All"}`; $("tBtn").classList.toggle("on", !!F.t); $("tBtn").title = F.t;
     for (const b of $("tabs").children) b.classList.toggle("on", b.dataset.tab === F.tab);
     for (const b of $("posPills").children) b.classList.toggle("on", b.dataset.pos === F.pos);
-    $("weeks").hidden = F.tab !== "teams"; $("posPills").hidden = F.tab !== "exposure";
+    $("wMenu").hidden = F.tab !== "teams"; $("posPills").hidden = F.tab !== "exposure";
     $("advWrap").hidden = F.tab !== "teams"; $("advOnly").checked = F.adv === "1"; $("advWrap").classList.toggle("on", F.adv === "1");
     $("panel").classList.toggle("xp", F.tab === "exposure");
     $("fP").hidden = F.tab !== "teams"; $("fQ").hidden = F.tab !== "exposure";
@@ -309,11 +314,14 @@
   const pids = () => F.p.split(",").filter(Boolean);
 
   $("fT").addEventListener("change", (e) => set({ t: e.target.value }));
-  const tOpen = (open) => { const l = $("tList"); if (!l) return; l.hidden = !open; $("tBtn").setAttribute("aria-expanded", String(open)); };
-  $("tBtn").addEventListener("click", () => tOpen($("tList").hidden));
+  // the two menus (week, tournament): one open at a time; a click elsewhere or Escape closes them
+  const MENUS = [["wBtn", "wList"], ["tBtn", "tList"]];
+  const menuOpen = (btn, open) => { for (const [b, l] of MENUS) { const on = open && b === btn; if ($(l)) { $(l).hidden = !on; $(b).setAttribute("aria-expanded", String(on)); } } };
+  const tOpen = (open) => menuOpen("tBtn", open);
+  for (const [b, l] of MENUS) $(b).addEventListener("click", () => menuOpen(b, $(l).hidden));
   $("tList").addEventListener("click", (e) => { const b = e.target.closest("[data-t]"); if (!b) return; tOpen(false); if (b.dataset.t !== F.t) set({ t: b.dataset.t }); });
-  document.addEventListener("click", (e) => { if (!$("tMenu")?.contains(e.target)) tOpen(false); });
-  $("weeks").addEventListener("click", (e) => { const b = e.target.closest("[data-w]"); if (!b || b.disabled) return; const w = b.dataset.w === String(data?.week) ? "" : b.dataset.w; if (w !== F.w) set({ w }); });
+  $("wList").addEventListener("click", (e) => { const b = e.target.closest("[data-w]"); if (!b || b.disabled) return; tOpen(false); const w = b.dataset.w === String(data?.week) ? "" : b.dataset.w; if (w !== F.w) set({ w }); });
+  document.addEventListener("click", (e) => { if (!$("tMenu")?.contains(e.target) && !$("wMenu")?.contains(e.target)) tOpen(false); });
   $("advOnly").addEventListener("change", (e) => set({ adv: e.target.checked ? "1" : "" }));
   $("tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b && b.dataset.tab !== F.tab) set({ tab: b.dataset.tab, sort: "", dir: "" }); });
   $("posPills").addEventListener("click", (e) => { const b = e.target.closest("[data-pos]"); if (b) set({ pos: b.dataset.pos }); });
