@@ -15,9 +15,8 @@
 <div class="bar pbar"><div class="in">
   <span class="brand">dkbbdb</span>
   <div class="spacer"></div>
-  <!-- a browser that never synced gets "Add your teams"; one that has (dkbbdb-me) gets a link to its own page on anyone else's, nothing on its own -->
+  <!-- "Add your teams" only for a browser that never synced (no dkbbdb-me); a browser that has gets nothing here -->
   <a class="btn primary" id="navAdd" href="/#add">Add your teams</a>
-  <a class="btn mine" id="navMine" href="/" hidden>My teams</a>
 </div></div>
 <main class="profile">
   <header class="who">
@@ -111,8 +110,8 @@
   if ((new URLSearchParams(location.search).get("u") ?? "").trim().toLowerCase() === who.toLowerCase()) { try { localStorage.setItem("dkbbdb-me", who); } catch { /* private window */ } }
   const myName = () => { try { return localStorage.getItem("dkbbdb-me") ?? ""; } catch { return ""; } };
   const isMe = () => myName().toLowerCase() === who.toLowerCase();
-  // the nav's right end: "Add your teams" only for a browser that has not synced; otherwise a way back to its own page
-  const navMe = () => { const me = myName(); $("navAdd").hidden = !!me; $("navMine").hidden = !me || isMe(); if (me) $("navMine").href = "/u/" + encodeURIComponent(me); };
+  // the nav's right end: "Add your teams" only for a browser that has not synced
+  const navMe = () => { $("navAdd").hidden = !!myName(); };
   const remember = (name) => { try { localStorage.setItem("dkbbdb-me", name); } catch { /* private window */ } navMe(); };
   navMe();
 

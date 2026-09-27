@@ -236,8 +236,6 @@ td.user .pos { margin-right: 4px; }
 .pbar .brand { font-size: 17px; letter-spacing: 0; }
 .pbar .btn.primary { height: 36px; padding: 0 16px; border-radius: 999px; display: inline-flex; align-items: center; font-weight: 600; }
 .pbar .btn.primary:hover { filter: brightness(1.1); background: var(--accent); }
-.pbar .btn.mine { height: 36px; padding: 0 16px; border-radius: 999px; display: inline-flex; align-items: center; font-weight: 600; color: var(--ink-2); border-color: var(--line); }
-.pbar .btn.mine:hover { color: var(--ink); background: none; }
 
 /* 2. identity block, centred: name + live pill on one line, "193 teams · 6 tournaments · NFL week 3" under it */
 main.profile { max-width: calc(1080px + 32px); padding: 20px 16px 32px; }

@@ -69,9 +69,9 @@ click(d.querySelector('#active [data-clear="ticks"]')); await wait();
 ok("clearing the ticks restores every player (the RB pill is still on) and hides the pills", rows().length > 50 && rows().every((r) => r.querySelector(".pos")?.textContent === "RB") && d.getElementById("tickPills").hidden && !/ticked/.test(tk()) && /\d+ teams · \d+ tournaments/.test(text(d.getElementById("sub"))), `${rows().length} RBs · ${text(d.getElementById("sub"))}`);
 ok("no script errors", errors.length === 0, errors.slice(0, 3).join(" | "));
 ok("the wordmark is not a link", d.querySelector(".pbar .brand")?.tagName === "SPAN" && !d.querySelector(".pbar a.brand"));
-ok("a browser that never synced: the add-your-teams button; no username search anywhere",![...d.querySelectorAll("input")].some((i) => /username/i.test(i.placeholder + i.getAttribute("aria-label"))) && !d.getElementById("navAdd").hidden && d.getElementById("navMine").hidden);
+ok("a browser that never synced: the add-your-teams button; no username search anywhere",![...d.querySelectorAll("input")].some((i) => /username/i.test(i.placeholder + i.getAttribute("aria-label"))) && !d.getElementById("navAdd").hidden && d.querySelectorAll(".pbar a").length === 1);
 { const own = boot(`${site}/u/fleaflick?me=1`); await wait(5000);
-  ok("a browser on its own page (?me=1 remembers it): no add-your-teams button, no my-teams link", own.d.getElementById("navAdd").hidden && own.d.getElementById("navMine").hidden && own.w.localStorage.getItem("dkbbdb-me") === "fleaflick");
+  ok("a browser that has synced (?me=1 remembers it): nothing at the nav's right end", own.d.getElementById("navAdd").hidden && !own.d.querySelector(".pbar a:not([hidden])") && own.w.localStorage.getItem("dkbbdb-me") === "fleaflick");
   own.d.getElementById("forgetLink").click();
   ok("'forget that' brings the add-your-teams button back", !own.d.getElementById("navAdd").hidden && !own.w.localStorage.getItem("dkbbdb-me")); }
 const hdr = { headers: process.env.VERCEL_OIDC_TOKEN ? { "x-vercel-trusted-oidc-idp-token": process.env.VERCEL_OIDC_TOKEN } : {} };
