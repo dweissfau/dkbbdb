@@ -11,29 +11,42 @@
 <link rel="stylesheet" href="/site.css">
 </head>
 <body>
-<div class="bar">
+<!-- layout: design handoff "Profile 12A" (design_handoff_profile_page/README.md) — nav · identity · one dense card -->
+<div class="bar pbar"><div class="in">
   <a class="brand" href="/">dkbbdb</a>
   <div class="spacer"></div>
-  <a class="btn" href="/leaderboard">Leaderboard</a>
-</div>
+  <form class="find ufind" id="fU" autocomplete="off"><input type="search" placeholder="Find a username…" aria-label="Find a username" spellcheck="false" autocapitalize="off"><div class="hits" hidden></div></form>
+  <a class="btn primary" href="/#add">Add your teams</a>
+</div></div>
 <main class="profile">
   <header class="who">
-    <div>
-      <h1 id="name">&nbsp;</h1>
-      <div class="sub" id="sub"></div>
-    </div>
-    <span class="note" id="liveNote"></span>
+    <div class="idrow"><h1 id="name">&nbsp;</h1><span class="lp" id="liveNote" hidden></span></div>
+    <div class="sub" id="sub">&nbsp;</div>
   </header>
-  <div class="tiles" id="tiles"></div>
 
-  <div class="panel" id="panel">
+  <div class="card" id="panel">
+    <div class="tiles" id="tiles"></div>
     <div class="head">
       <div class="pills" id="tabs" role="tablist">
         <button class="pill on" data-tab="teams" role="tab">Teams</button>
-        <button class="pill" data-tab="exposure" role="tab">Exposure</button>
+        <button class="pill" data-tab="exposure" role="tab">Player exposure</button>
+      </div>
+      <span class="vr" aria-hidden="true"></span>
+      <!-- Teams tab: the week chips (the standing as of a finished week; Playoffs once they start) -->
+      <div class="weeks" id="weeks" role="group" aria-label="Week"></div>
+      <!-- Exposure tab: position chips in the same slot -->
+      <div class="weeks" id="posPills" role="group" aria-label="Position" hidden>
+        <button class="wk on" data-pos="">All</button><button class="wk" data-pos="QB">QB</button><button class="wk" data-pos="RB">RB</button><button class="wk" data-pos="WR">WR</button><button class="wk" data-pos="TE">TE</button>
       </div>
       <button class="btn" id="filterBtn" aria-label="Filters and sort" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg></button>
-      <!-- on desktop these sit inline in the head; on a phone they are a sheet opened by the funnel button -->
+      <div class="spacer"></div>
+      <span class="note" id="count"></span>
+      <!-- desktop: the tournament menu; on a phone the sheet's select does the same job -->
+      <div class="tmenu" id="tMenu">
+        <button class="tbtn" id="tBtn" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="tl">Tournament · All</span><span aria-hidden="true">▾</span></button>
+        <div class="menu" id="tList" role="listbox" aria-label="Tournament" hidden></div>
+      </div>
+      <!-- phone: the filters are a sheet under the funnel button (desktop shows only the Exposure tab's search box from here) -->
       <div class="veil" id="toolsVeil" hidden></div>
       <div class="tools" id="tools">
         <div class="sheethead"><b>Filters</b><button class="btn" id="toolsDone" type="button">Done</button></div>
@@ -46,20 +59,17 @@
         <form class="find" id="fQ" autocomplete="off" hidden>
           <input type="search" placeholder="Player or team (e.g. Jets)…" aria-label="Player or team" spellcheck="false">
         </form>
-        <div class="pills" id="posPills" hidden>
-          <button class="pill mini on" data-pos="">All</button><button class="pill mini" data-pos="QB">QB</button><button class="pill mini" data-pos="RB">RB</button><button class="pill mini" data-pos="WR">WR</button><button class="pill mini" data-pos="TE">TE</button>
-        </div>
         <label class="check" id="advWrap"><input type="checkbox" id="advOnly"> Advancing only</label>
-        <!-- ticked teams (the boxes on the Teams rows): shown once anything is ticked, on both tabs -->
-        <div class="pills" id="tickPills" hidden title="Tick teams on the Teams tab, then see only those teams — or everything but them — on both tabs">
-          <button class="pill mini on" data-tick-mode="">All teams</button><button class="pill mini" data-tick-mode="only">Only ticked</button><button class="pill mini" data-tick-mode="hide">Hide ticked</button>
-        </div>
         <label class="sortwrap" id="sortWrap">Sort by <select id="fS" aria-label="Sort by"></select></label>
       </div>
-      <div class="spacer"></div>
-      <span class="note" id="count"></span>
     </div>
-    <div class="active" id="active" hidden></div>
+    <!-- what the filters are doing: the ticked-teams pills (owner's page, once anything is ticked) and the filter chips -->
+    <div class="subrow" id="subrow" hidden>
+      <div class="pills" id="tickPills" hidden title="Tick teams on the Teams tab, then see only those teams — or everything but them — on both tabs">
+        <button class="pill mini on" data-tick-mode="">All teams</button><button class="pill mini" data-tick-mode="only">Only ticked</button><button class="pill mini" data-tick-mode="hide">Hide ticked</button>
+      </div>
+      <div class="active" id="active" hidden></div>
+    </div>
     <div class="scroll-x">
       <table>
         <thead><tr id="thead"></tr></thead>
@@ -82,14 +92,13 @@
   const pc1 = (v) => v == null ? "—" : `${Number(v).toFixed(1)}%`;
   const money = (n) => n == null ? "—" : "$" + Number(n).toLocaleString();
   const day = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—";
-  const agoTxt = (iso) => { const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000)); return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : `${(s / 3600).toFixed(1)} h ago`; };
   const plural = (n, w) => `${Number(n).toLocaleString()} ${w}${n === 1 ? "" : "s"}`;
   const posTag = (p) => `<b class="pos ${esc(p)}">${esc(p)}</b>`;
   const LOGO_ABBR = { WAS: "wsh" };
   const logo = (team) => { const t = String(team ?? "").toUpperCase(); return /^[A-Z]{2,3}$/.test(t) && t !== "FA" && t !== "TBD"
     ? `<img class="tlogo" src="https://a.espncdn.com/i/teamlogos/nfl/500/${LOGO_ABBR[t] ?? t.toLowerCase()}.png" alt="${esc(t)}" title="${esc(t)}" loading="lazy" onerror="this.style.visibility='hidden'">`
     : `<span class="tlogo"></span>`; };
-  const PAGE = 100;
+  const PAGE = 200; // the whole account in one go for anyone under 200 teams; "Show more" past that
 
   const who = decodeURIComponent((/^\/u\/([^/]+)/.exec(location.pathname) ?? [])[1] ?? "").split(",")[0].trim();
   if (!who) { location.replace("/"); return; }
@@ -99,11 +108,11 @@
   const remember = (name) => { try { localStorage.setItem("dkbbdb-me", name); } catch { /* private window */ } };
   const isMe = () => { try { return (localStorage.getItem("dkbbdb-me") ?? "").toLowerCase() === who.toLowerCase(); } catch { return false; } };
 
-  // the view lives in the address: /u/<name>?tab=exposure &t=tournament &p=playerId[,id…] &adv=1 &pos=QB &q=name &sort=&dir= &team=entryId
+  // the view lives in the address: /u/<name>?tab=exposure &t=tournament &w=week|po &p=playerId[,id…] &adv=1 &pos=QB &q=name &sort=&dir= &team=entryId
   const sp = new URLSearchParams(location.search);
-  const F = { tab: sp.get("tab") === "exposure" ? "exposure" : "teams", t: sp.get("t") ?? "", p: sp.get("p") ?? "", adv: sp.get("adv") === "1" ? "1" : "",
+  const F = { tab: sp.get("tab") === "exposure" ? "exposure" : "teams", t: sp.get("t") ?? "", w: sp.get("w") ?? "", p: sp.get("p") ?? "", adv: sp.get("adv") === "1" ? "1" : "",
     pos: sp.get("pos") ?? "", q: sp.get("q") ?? "", sort: sp.get("sort") ?? "", dir: sp.get("dir") ?? "", team: sp.get("team") ?? "" };
-  let data = null, rows = [], shown = PAGE;
+  let data = null, rows = [], shown = PAGE, fetchFailed = false;
 
   // ticked teams: the boxes on the Teams rows. T.ids = entry ids (strings), T.mode = "" (just marks) | "only" (both tabs
   // show only those teams) | "hide" (both tabs leave them out). Kept per account in this browser, not in the address.
@@ -126,19 +135,22 @@
   const gapChip = (t) => t.gap == null ? (t.adv ? `<span class="chip">Advancing</span>` : t.adv === false ? `<span class="chip out">Out</span>` : `<span class="chip wait">Not started</span>`)
     : t.adv ? `<span class="chip" title="points ahead of the best team outside the cut line">Advancing +${pts(t.gap)}</span>`
     : `<span class="chip out" title="points behind the last team inside the cut line">Out by ${pts(-t.gap)}</span>`;
-  const place = (t) => t.rank == null ? "—" : `<b>${t.rank}</b><span class="of"> / ${t.entrants ?? "—"}</span>`;
-  const L = (long, short) => `<span class="lg">${long}</span><span class="sm">${short}</span>`;
-  const shortName = (c) => String(c ?? "").replace(/\s*\[[^\]]*\]/g, "").trim(); // phone: "$20M Millionaire [$3M to 1st]" → "$20M Millionaire"
+  const place = (t) => t.rank == null ? "—" : `<b>${t.rank}</b><span class="of">/${t.entrants ?? "—"}</span>`;
+  const shortName = (c) => String(c ?? "").replace(/\s*\[[^\]]*\]/g, "").trim(); // "$20M Millionaire [$3M to 1st]" → "$20M Millionaire"
+  // a team row: its first three draft picks ("Bigsby · Hampton · G. Smith"), then tournament · buy-in · draft date
+  // (a phone puts the league place in front of that line — the Place column is hidden there)
+  const teamCell = (t) => `<div class="t1">${esc(t.top?.length ? t.top.join(" · ") : shortName(t.contest))}</div>` +
+    `<div class="t2"><span class="sm">${t.rank == null ? "no place yet" : `<b>${t.rank}</b>/${t.entrants}`} · </span>${esc(shortName(t.contest))} · ${money(t.buyIn)} · ${day(t.date)}</div>`;
   // columns per tab: [sort key | null, label, css class, cell html]
   const COLS = {
     teams: [...(TICKS ? [[null, `<input type="checkbox" class="tick" id="tickAll" aria-label="Tick every team in view" title="Tick / untick every team the filters leave">`, "tick", (t) => tickBox(t.id)]] : []),
-      [null, "", "rk num", (t) => t.n],
-      ["contest", "Tournament", "contest", (t) => `<span class="lg">${esc(t.contest)}</span><span class="sm">${esc(shortName(t.contest))}</span><div class="under"><span class="sm">${t.rank == null ? "no place yet" : `<b>${t.rank}</b>/${t.entrants}`} · </span>${money(t.buyIn)} · ${day(t.date)}</div>`],
-      ["rank", L("League place", "Place"), "col-place", place], ["gap", "Cut line", "gap", gapChip],
-      ["left", "Left", "num col-left", (t) => t.left ?? "—"], ["points", "Points", "num points", (t) => `<b>${pts(t.points)}</b>`]],
-    exposure: [[null, "", "rk num", (r) => r.n], ["name", "Player", "user", (r) => `${posTag(r.pos)} ${logo(r.team)}<span class="pname">${esc(r.name)}</span><div class="under sm">${pc1(r.own)} of teams · ${r.advancing} advancing · pick ${r.avgPick == null ? "—" : Number(r.avgPick).toFixed(1)}</div>`],
-      ["buyIn", "Entry fees", "num points", (r) => `<b>${money(r.buyIn)}</b>`], ["own", L("Exposure", "Exp"), "num col-own", (r) => pc1(r.own)], ["advancing", "Advancing", "num col-buyin", (r) => r.advancing],
-      ["advRate", L("Advance rate", "Adv %"), "num col-left", (r) => pc1(r.advRate)], ["avgPick", "Avg pick", "num col-date", (r) => r.avgPick == null ? "—" : Number(r.avgPick).toFixed(1)]],
+      [null, "#", "rk", (t) => t.n],
+      [null, "Team", "team", teamCell],
+      ["rank", "Place", "num col-place", place], ["gap", "Cut line", "gap", gapChip],
+      ["left", "To play", "num col-left", (t) => t.left ?? "—"], ["points", "Points", "num points", (t) => pts(t.points)]],
+    exposure: [[null, "#", "rk", (r) => r.n], ["name", "Player", "user", (r) => `${posTag(r.pos)} ${logo(r.team)}<span class="pname">${esc(r.name)}</span><div class="under sm">${pc1(r.own)} of teams · ${r.advancing} advancing · pick ${r.avgPick == null ? "—" : Number(r.avgPick).toFixed(1)}</div>`],
+      ["buyIn", "Entry fees", "num points", (r) => money(r.buyIn)], ["own", "Exposure", "num col-own", (r) => pc1(r.own)], ["advancing", "Advancing", "num col-buyin", (r) => r.advancing],
+      ["advRate", "Advance rate", "num col-left", (r) => pc1(r.advRate)], ["avgPick", "Avg pick", "num col-date", (r) => r.avgPick == null ? "—" : Number(r.avgPick).toFixed(1)]],
   };
   const ASC_FIRST = new Set(["name", "avgPick", "rank", "date", "contest"]);
   // the phone's sort menu (the table header is hidden there): [label, key, dir]
@@ -147,7 +159,7 @@
     exposure: [["Entry fees", "buyIn", "desc"], ["Exposure", "own", "desc"], ["Advance rate", "advRate", "desc"], ["Avg pick", "avgPick", "asc"], ["Name", "name", "asc"]],
   };
 
-  const params = (extra) => { const q = { view: F.tab === "exposure" ? "players" : "teams", u: who, t: F.t, sort: F.sort, dir: F.dir, ...extra };
+  const params = (extra) => { const q = { view: F.tab === "exposure" ? "players" : "teams", u: who, t: F.t, w: F.w, sort: F.sort, dir: F.dir, ...extra };
     if (F.tab === "teams") { q.p = F.p; q.adv = F.adv; } else { q.pos = F.pos; q.q = F.q.trim(); }
     if (T.mode && T.ids.size) q[T.mode] = [...T.ids].join(",");
     return new URLSearchParams(Object.entries(q).filter(([, v]) => v !== "" && v != null)); };
@@ -161,59 +173,72 @@
 
   function renderHeader(P, sc, f) {
     $("name").textContent = P.user; document.title = `${P.user} · dkbbdb`;
-    // the header line and both stats follow the filters: a tournament narrows them to the user's teams in it, chosen
+    // the subline and the tiles follow the filters: a tournament narrows them to the user's teams in it, chosen
     // players (Teams tab) to the teams that have them within that — `scope` from the API is that set's summary
     const players = F.tab === "teams" && f ? f.p : [];
     const tk = f?.ticks ?? { only: 0, hide: 0 };
     const tickName = T.mode === "only" && tk.only ? `${tk.only} ticked` : T.mode === "hide" && tk.hide ? `all but ${tk.hide} ticked` : "";
     const scopeName = [tickName, F.t ? shortName(F.t) : "", ...players.map((x) => x.name)].filter(Boolean).join(" · ");
     const S = scopeName && sc ? sc : P;
-    $("sub").innerHTML = `<span class="lg">DraftKings best ball · </span>` + (scopeName
-      ? `<b>${S.teams.toLocaleString()}</b> of ${plural(P.teams, "team")}<span class="lg"> · ${esc(scopeName)}</span>`
-      : `${plural(P.teams, "team")}<span class="lg"> in ${plural(P.tournaments.length, "tournament")}</span>`) + ` · NFL week ${data.week}`;
-    // stats: [label, value html, detail, css class]. Desktop = a plain strip (number, then "label · detail" under it);
-    // phone = two small boxes, no detail, the filters' scope as a small line under the number
-    const tg = scopeName ? `<div class="tg sm" title="${esc(scopeName)}">${esc(scopeName)}</div>` : "";
-    const ranked = S.advancing + S.out, tiles = [
-      ["Advancing", `<span class="good">${S.advancing.toLocaleString()}</span><span class="of"> of ${S.teams.toLocaleString()}</span>${tg}`,
-        ranked ? "" : scopeName ? "no league places on these teams yet" : "no league places yet", "t-adv"],
-      // Winning = the guaranteed prizes of the teams inside the cut line (next round's minimum), plus anything already
-      // credited. A tournament whose payout table is not on file yet shows up in the detail, not in the total.
-      // just the word under the number; a missing payout table is only mentioned on hover
-      ["Winning", `<span class="good">${money(S.winning)}</span>${tg}`, "", "t-fees",
-        S.winUnknown ? `payout table not on file yet for ${plural(S.winUnknown, "advancing team")} — sync again to add it` : ""]];
-    $("tiles").innerHTML = tiles.map(([k, v, d, cls, tip]) => `<div class="tile ${cls}"${tip ? ` title="${esc(tip)}"` : ""}><div class="k">${esc(k)}${d ? `<span class="d"> · ${esc(d)}</span>` : ""}</div><div class="v">${v}</div></div>`).join("");
+    const when = data.w === "po" ? " · playoffs" : data.w != null ? ` · as of week ${data.w}` : "";
+    $("sub").innerHTML = (scopeName
+      ? `<b>${S.teams.toLocaleString()}</b> of ${plural(P.teams, "team")} · ${esc(scopeName)}`
+      : `${plural(P.teams, "team")} · ${plural(P.tournaments.length, "tournament")}`) + ` · NFL week ${data.week}${when}`;
+    // the four tiles: [label, value html, tooltip]. Winnings = the guaranteed prizes of the teams inside the cut line
+    // (next round's minimum) plus anything already credited; a tournament with no payout table on file is only mentioned on hover
+    const ranked = S.advancing + S.out, best = S.best;
+    const tiles = [
+      ["Advancing", ranked ? `<span class="good">${S.advancing.toLocaleString()}</span>` : "—", ranked ? `${S.advancing.toLocaleString()} of ${plural(ranked, "team")} with a league place` : "no league places yet"],
+      ["Winnings", `<span class="good">${money(S.winning)}</span>`, S.winUnknown ? `payout table not on file yet for ${plural(S.winUnknown, "advancing team")} — sync again to add it` : "guaranteed by the teams inside the cut line, plus anything already credited"],
+      ["Entry fees", money(S.buyIn), ""],
+      ["Best team", best ? pts(best.points) : "—", best ? `${shortName(best.contest)}${best.rank != null ? ` · ${best.rank}/${best.entrants}` : ""}` : ""]];
+    $("tiles").innerHTML = tiles.map(([k, v, tip]) => `<div class="tile"${tip ? ` title="${esc(tip)}"` : ""}><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+  }
+  // the week chips: every week of the season so far (a finished week the site has on file can be picked — the standing
+  // as of it; this week is the season as it stands), then Playoffs, disabled until a team is in a playoff round
+  function renderWeeks(P) {
+    const cur = data.week, have = new Set(data.weeks ?? []), sel = data.w === "po" ? "po" : data.w ?? cur;
+    const chips = [];
+    for (let w = 1; w <= cur; w++) chips.push([String(w), w === cur ? `Wk ${w} · live` : `Wk ${w}`, w === cur || have.has(w), sel === w, w === cur ? "this week — the season as it stands" : have.has(w) ? `the standing as of week ${w}` : `week ${w} is not on file yet`]);
+    chips.push(["po", "Playoffs", !!P.playoffs, sel === "po", P.playoffs ? "the playoff rounds" : "the playoffs have not started"]);
+    $("weeks").innerHTML = chips.map(([v, label, on, isSel, tip]) => `<button type="button" class="wk${isSel ? " on" : ""}" data-w="${v}"${on ? "" : " disabled"} title="${esc(tip)}" aria-pressed="${isSel}">${label}</button>`).join("");
   }
 
   function render() {
     const cols = COLS[F.tab];
     if (!data?.live) { $("rows").innerHTML = `<tr><td class="empty">Scores are unavailable right now — try again in a minute.</td></tr>`; return; }
     const P = data.profile, f = data.filter, s = data.stats;
-    renderHeader(P, data.scope, f);
-    if (P.teams && (sp.get("me") === "1" || isMe())) { remember(P.user); $("forget").hidden = false; } // typed on the home page, or already this browser's own page
     if (!P.teams) { // nothing synced under this name
-      $("tiles").innerHTML = ""; $("sub").textContent = "";
+      $("tiles").innerHTML = ""; $("sub").textContent = ""; $("liveNote").hidden = true;
       $("panel").innerHTML = `<div class="empty">No teams under “${esc(P.user)}” on dkbbdb yet. If that is you, <a href="/">add your teams</a> — it takes about a minute.</div>`;
       return;
     }
+    renderHeader(P, data.scope, f);
+    if (sp.get("me") === "1" || isMe()) { remember(P.user); $("forget").hidden = false; } // typed on the home page, or already this browser's own page
 
+    // the tournament: the pill menu (desktop) and the sheet's select (phone) list the same tournaments with team counts
     const sel = $("fT");
     sel.replaceChildren(new Option(`All tournaments (${P.teams.toLocaleString()})`, ""), ...P.tournaments.map((t) => new Option(`${t.name} (${t.teams.toLocaleString()})`, t.name)));
     sel.value = F.t;
+    $("tList").innerHTML = [["", "All tournaments", P.teams], ...P.tournaments.map((t) => [t.name, t.name, t.teams])]
+      .map(([v, label, n]) => `<button type="button" role="option" data-t="${esc(v)}" aria-selected="${v === F.t}"${v === F.t ? ' class="on"' : ""}>${esc(label)}<span>${n.toLocaleString()}</span></button>`).join("");
+    $("tBtn").querySelector(".tl").textContent = `Tournament · ${F.t ? shortName(F.t) : "All"}`; $("tBtn").classList.toggle("on", !!F.t); $("tBtn").title = F.t;
     for (const b of $("tabs").children) b.classList.toggle("on", b.dataset.tab === F.tab);
     for (const b of $("posPills").children) b.classList.toggle("on", b.dataset.pos === F.pos);
-    $("posPills").hidden = F.tab !== "exposure"; $("advWrap").hidden = F.tab !== "teams"; $("advOnly").checked = F.adv === "1"; $("advWrap").classList.toggle("on", F.adv === "1");
-    $("panel").classList.toggle("xp", F.tab === "exposure"); // desktop: the sort menu only on Teams (Exposure sorts by its column headers)
+    $("weeks").hidden = F.tab !== "teams"; $("posPills").hidden = F.tab !== "exposure";
+    $("advWrap").hidden = F.tab !== "teams"; $("advOnly").checked = F.adv === "1"; $("advWrap").classList.toggle("on", F.adv === "1");
+    $("panel").classList.toggle("xp", F.tab === "exposure");
     $("fP").hidden = F.tab !== "teams"; $("fQ").hidden = F.tab !== "exposure";
     { const q = $("fQ").querySelector("input"); if (q.value !== F.q && document.activeElement !== q) q.value = F.q; } // a link's ?q=, not the box mid-typing
+    if (F.tab === "teams") renderWeeks(P);
 
     // the phone's sort menu mirrors the current sort
     const sorts = SORTS[F.tab];
     $("fS").replaceChildren(...sorts.map(([label, key, dir]) => new Option(label, `${key}:${dir}`)));
     $("fS").value = sorts.some(([, key, dir]) => key === data.sort && dir === data.dir) ? `${data.sort}:${data.dir}` : `${sorts[0][1]}:${sorts[0][2]}`;
 
-    // chosen players (Teams tab): chips + one line of numbers against the teams in view. On a phone the other
-    // filters live in the sheet, so they get chips too (and the funnel button a dot) — the table explains itself
+    // what the filters are doing, under the controls: chosen players (Teams tab) as chips + one line of numbers against
+    // the teams in view; the phone's sheet filters get chips too (and the funnel button a dot) — the table explains itself
     const chips = [];
     const np = F.tab === "teams" ? f.p.length : 0;
     const nq = F.tab === "exposure" ? F.q.trim() : "";
@@ -224,7 +249,7 @@
     for (const b of $("tickPills").children) b.classList.toggle("on", b.dataset.tickMode === T.mode);
     if (TICKS && T.ids.size) chips.push(`<span class="tag" title="${T.mode === "only" ? "both tabs show only the ticked teams" : T.mode === "hide" ? "both tabs leave the ticked teams out" : "ticks are just marks until you pick “Only ticked” or “Hide ticked”"}">${plural(T.ids.size, "team")} ticked${T.mode === "only" ? " · only these" : T.mode === "hide" ? " · hidden" : ""}<button data-clear="ticks" aria-label="Untick every team">✕</button></span>`);
     if (F.t) chips.push(`<span class="tag sm">${esc(shortName(F.t))}<button data-clear="t" aria-label="All tournaments">✕</button></span>`);
-    if (F.tab === "teams" && F.adv === "1") chips.push(`<span class="tag sm">Advancing only<button data-clear="adv" aria-label="Every team">✕</button></span>`);
+    if (F.tab === "teams" && F.adv === "1") chips.push(`<span class="tag">Advancing only<button data-clear="adv" aria-label="Every team">✕</button></span>`);
     if (F.tab === "exposure" && F.pos) chips.push(`<span class="tag sm">${posTag(F.pos)}only<button data-clear="pos" aria-label="Every position">✕</button></span>`);
     if (nq) chips.push(`<span class="tag">“${esc(nq)}”<button data-clear="q" aria-label="Clear the name search">✕</button></span>`);
     if (np) {
@@ -233,11 +258,13 @@
       chips.push(`<span class="sub"><b>${s.count.toLocaleString()}</b> of ${plural(s.field, "team")}${f.t ? " in this tournament" : ""} have ${them} (${pct(s.count, s.field)}) · <b>${s.advancing.toLocaleString()}</b> advancing${s.ranked ? ` (${pct(s.advancing, s.ranked)}, all teams ${pct(s.fieldAdvancing, s.fieldRanked)})` : ""}${np < 5 ? " · add another player to narrow it down" : ""}</span>`);
     }
     $("active").innerHTML = chips.join(""); $("active").hidden = !chips.length;
+    $("subrow").hidden = $("active").hidden && $("tickPills").hidden;
 
-    // the Teams tab's count is in the header line already; the Exposure tab's player count sits by the table
+    // the Teams tab's count is in the subline already; the Exposure tab's player count sits by the table
     $("count").textContent = F.tab === "teams" ? "" : nq && !data.total ? `nobody matching “${nq}”` : plural(data.total, "player");
     const thClass = (cls) => cls.split(" ").filter((c) => c === "num" || c === "tick" || c.startsWith("col-")).join(" ");
-    $("thead").innerHTML = cols.map(([key, label, cls]) => `<th class="${thClass(cls)}${key ? " sortable" : ""}"${key ? ` data-sort="${key}" tabindex="0"` : ""}>${label}${key && data.sort === key ? `<span class="arrow">${data.dir === "asc" ? "▲" : "▼"}</span>` : ""}</th>`).join("");
+    $("thead").innerHTML = cols.map(([key, label, cls]) => { const on = key && data.sort === key;
+      return `<th class="${thClass(cls)}${key ? " sortable" : ""}${on ? " on" : ""}"${key ? ` data-sort="${key}" tabindex="0" aria-sort="${on ? (data.dir === "asc" ? "ascending" : "descending") : "none"}"` : ""}>${label}${on ? `<span class="arrow">${data.dir === "asc" ? "▲" : "▼"}</span>` : ""}</th>`; }).join("");
     const attr = (r) => F.tab === "teams" ? `data-id="${esc(r.id)}"${T.ids.has(String(r.id)) ? ' class="ticked"' : ""}` : `data-player="${r.id}"`;
     $("rows").innerHTML = rows.map((r) => `<tr ${attr(r)} tabindex="0">${cols.map(([, , cls, cell]) => `<td class="${cls}">${cell(r)}</td>`).join("")}</tr>`).join("")
       || `<tr><td colspan="${cols.length}" class="empty">Nothing matches.</td></tr>`;
@@ -246,9 +273,17 @@
     $("more").hidden = rows.length >= data.total;
     renderNote();
   }
+  // the live pill by the name: green under 15 minutes, amber past that, red when the last refresh failed
   function renderNote() {
-    if (!data?.at) return;
-    $("liveNote").innerHTML = `<span class="live" title="updated ${agoTxt(data.at)}"><span class="dot"></span><span class="lg">${data.playing ? "games on" : "live scoring"} · updated ${agoTxt(data.at)}</span><span class="sm">Live</span></span>`;
+    const el = $("liveNote");
+    if (!data?.at) { el.hidden = true; return; }
+    const min = Math.max(0, Math.round((Date.now() - Date.parse(data.at)) / 60000));
+    const ago = min < 1 ? "just now" : min < 90 ? `${min} min ago` : `${Math.round(min / 60)} h ago`;
+    const state = fetchFailed ? "bad" : min < 15 ? "" : "warm";
+    el.className = "lp" + (state ? ` ${state}` : "");
+    el.innerHTML = `<span class="dot"></span>${fetchFailed ? `Couldn't refresh · showing ${ago}` : state ? `Updated ${ago}` : `Live · ${ago}`}`;
+    el.title = `${data.playing ? "games on · " : ""}scored ${new Date(data.at).toLocaleString()}`;
+    el.hidden = false;
   }
 
   let seq = 0;
@@ -260,13 +295,24 @@
       const got = d.rows ?? [];
       while (d.live && got.length < Math.min(shown, d.total)) got.push(...(await (await req({ offset: got.length, limit: 200 })).json()).rows);
       if (mine !== seq) return;
-      data = d; rows = got; render();
-    } catch { if (!data) $("rows").innerHTML = `<tr><td class="empty">Could not load this page — check your connection.</td></tr>`; }
+      data = d; rows = got; fetchFailed = false;
+      const w = d.live && d.w != null ? String(d.w) : ""; if (d.live && w !== F.w) { F.w = w; pushState(); } // a week the site has no file for → the season
+      render();
+    } catch { fetchFailed = true; if (!data) $("rows").innerHTML = `<tr><td class="empty">Could not load this page — check your connection.</td></tr>`; else renderNote(); }
   }
   const set = (changes) => { Object.assign(F, changes); pushState(); load(); };
   const pids = () => F.p.split(",").filter(Boolean);
 
+  // the nav's username box: a suggestion picks that account's page; Enter with nothing suggested tries the name as typed
+  window.dkbbSuggest($("fU"), "user", (r) => { location.href = "/u/" + encodeURIComponent(r.username); });
+  $("fU").addEventListener("submit", () => { const q = $("fU").querySelector("input").value.trim(); if (q && $("fU").querySelector(".hits").hidden) location.href = "/u/" + encodeURIComponent(q); });
+
   $("fT").addEventListener("change", (e) => set({ t: e.target.value }));
+  const tOpen = (open) => { const l = $("tList"); if (!l) return; l.hidden = !open; $("tBtn").setAttribute("aria-expanded", String(open)); };
+  $("tBtn").addEventListener("click", () => tOpen($("tList").hidden));
+  $("tList").addEventListener("click", (e) => { const b = e.target.closest("[data-t]"); if (!b) return; tOpen(false); if (b.dataset.t !== F.t) set({ t: b.dataset.t }); });
+  document.addEventListener("click", (e) => { if (!$("tMenu")?.contains(e.target)) tOpen(false); });
+  $("weeks").addEventListener("click", (e) => { const b = e.target.closest("[data-w]"); if (!b || b.disabled) return; const w = b.dataset.w === String(data?.week) ? "" : b.dataset.w; if (w !== F.w) set({ w }); });
   $("advOnly").addEventListener("change", (e) => set({ adv: e.target.checked ? "1" : "" }));
   $("tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b && b.dataset.tab !== F.tab) set({ tab: b.dataset.tab, sort: "", dir: "" }); });
   $("posPills").addEventListener("click", (e) => { const b = e.target.closest("[data-pos]"); if (b) set({ pos: b.dataset.pos }); });
@@ -295,10 +341,11 @@
   $("filterBtn").addEventListener("click", () => sheet(!document.body.classList.contains("tools-open")));
   $("toolsDone").addEventListener("click", () => sheet(false));
   $("toolsVeil").addEventListener("click", () => sheet(false));
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") sheet(false); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { if ($("toolsVeil")) sheet(false); tOpen(false); } });
   if (location.hash === "#filters") sheet(true);
   $("forgetLink").addEventListener("click", () => { try { localStorage.removeItem("dkbbdb-me"); } catch { /* private window */ } });
   $("moreBtn").addEventListener("click", () => { shown += PAGE; load(true); });
+  // column headers sort; clicking the active one flips the direction
   const sortClick = (th) => { const k = th.dataset.sort; set({ sort: k, dir: data?.sort === k ? (data.dir === "asc" ? "desc" : "asc") : ASC_FIRST.has(k) ? "asc" : "desc" }); };
   $("thead").addEventListener("click", (e) => { const th = e.target.closest("[data-sort]"); if (th) sortClick(th); });
   $("thead").addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.matches("[data-sort]")) sortClick(e.target); });

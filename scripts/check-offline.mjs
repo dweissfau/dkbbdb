@@ -57,10 +57,14 @@ try {
   // 4. prior rows: the file is read once, then memory / the shared cache; a pod nobody has is recomputed and written back
   const base = (cids) => ({ pods: Object.fromEntries(cids.map((cid) => [cid, { rosters: { k1: { s: 1 } } }])), entries: {}, draftables: {} });
   const f = { week: 3, past: [] };
-  await putGz(PATHS.prior, { want: 2, rows: [["10", { through_week: 2, computed_at: new Date().toISOString(), data: { 1: { d: [1, 1, 2] } } }], ["11", { through_week: 2, computed_at: new Date().toISOString(), data: { 1: { d: [2, 2, 2] } } }]] });
+  await putGz(PATHS.prior, { want: 2, rows: [["10", { through_week: 2, computed_at: new Date().toISOString(), data: { 1: { d: [1, 1, 2] } }, wk: { 1: [0.5, 0.5] } }], ["11", { through_week: 2, computed_at: new Date().toISOString(), data: { 1: { d: [2, 2, 2] } }, wk: { 1: [1, 1] } }]] });
   _forgetPrior(); await rcDrop("prior-v1");
   let p = await priorFor(base(["10", "11"]), f);
-  ok("finished-week totals come from the file", p.stats.reused === 2 && p.prior["10"].k1.d[0] === 1);
+  ok("finished-week totals come from the file, with each roster's score per week", p.stats.reused === 2 && p.prior["10"].k1.d[0] === 1 && p.weekly["10"].k1[1] === 0.5);
+  await putGz(PATHS.prior, { want: 2, rows: [["10", { through_week: 2, computed_at: new Date().toISOString(), data: { 1: { d: [1, 1, 2] } } }]] }); _forgetPrior(); await rcDrop("prior-v1");
+  ok("a row from before the per-week scores is recomputed once", (await priorFor(base(["10"]), f)).stats.computed === 1);
+  await putGz(PATHS.prior, { want: 2, rows: [["10", { through_week: 2, computed_at: new Date().toISOString(), data: { 1: { d: [1, 1, 2] } }, wk: { 1: [0.5, 0.5] } }], ["11", { through_week: 2, computed_at: new Date().toISOString(), data: { 1: { d: [2, 2, 2] } }, wk: { 1: [1, 1] } }]] });
+  _forgetPrior(); await rcDrop("prior-v1"); p = await priorFor(base(["10", "11"]), f);
   await delFile(PATHS.prior);
   p = await priorFor(base(["10", "11"]), f);
   ok("then from memory (the file can even be gone)", p.stats.reused === 2);

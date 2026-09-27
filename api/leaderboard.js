@@ -1,6 +1,9 @@
 // GET /api/leaderboard — the site's scored teams (lib/leaderboard.js): one account's page, or the leaderboard of one tournament.
-//   ?view=teams (default)  &u=<dk username>&t=<tournament>&p=<dk player id[,id…]>&x=<player ids a team must NOT have>&adv=1&sort=&dir=&offset=&limit=
-//   ?view=players          &u=<dk username>&t=&p=&x=&pos=QB|RB|WR|TE&q=<part of a name>&sort=&dir=&offset=&limit=
+//   ?view=teams (default)  &u=<dk username>&t=<tournament>&p=<dk player id[,id…]>&x=<player ids a team must NOT have>&adv=1&w=&sort=&dir=&offset=&limit=
+//   ?view=players          &u=<dk username>&t=&p=&x=&pos=QB|RB|WR|TE&q=<part of a name>&w=&sort=&dir=&offset=&limit=
+//   both views: &w=<finished week> shows every team's standing as of that week (points through it, place, cut line);
+//   &w=po keeps the playoff rounds only; `weeks` in the answer lists the finished weeks on file. Teams rows carry
+//   `top` — the first three draft picks by short name, the line that tells one team from another.
 //   both views: &only=<entry id,id…> keeps just those teams, &hide=<entry id,id…> drops them (the page's ticked teams);
 //   the teams view adds `ids` (every id in the filtered set) with &withIds=1. A POST with the same fields as a JSON
 //   body is the same request — the page uses it when a ticked list is too long for an address.

@@ -1,6 +1,7 @@
 /* front page + connect page — same permanent dark palette as the app (public/app.html) */
 :root { color-scheme: dark; --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
-  --grid: #2c2c2a; --line: #383835; --border: rgba(255,255,255,.10); --accent: #3987e5; --good: #0ca30c; --chip-good: #199e70; --bad: #e66767; }
+  --grid: #2c2c2a; --line: #383835; --border: rgba(255,255,255,.10); --accent: #3987e5; --good: #0ca30c; --chip-good: #199e70; --bad: #e66767;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
 a { color: var(--accent); }
@@ -117,6 +118,7 @@ th.sortable:hover, th.sortable:focus-visible { color: var(--ink); }
 th .arrow { margin-left: 4px; font-size: 9px; color: var(--accent); }
 .chip { margin-left: 0; }
 .chip.out { background: rgba(217,89,38,.16); color: #f08a5d; }
+.chip.wait { background: var(--grid); color: var(--muted); }
 .pname { font-weight: 600; }
 .pteam { color: var(--muted); font-style: normal; font-size: 12.5px; }
 td.user .pos { margin-right: 4px; }
@@ -166,36 +168,8 @@ td.user .pos { margin-right: 4px; }
 .home footer { margin-top: 64px; }
 @media (max-width: 640px) { .home { padding: 36px 16px 32px; } .home h1 { font-size: 25px; } .home > p { font-size: 15px; } }
 
-/* profile page (/u/<name>): header, tiles, then the tables */
-.profile .who { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 6px 0 16px; }
-.profile h1 { font-size: 30px; margin: 0; letter-spacing: -.5px; line-height: 1.15; overflow-wrap: anywhere; }
-.profile .who .sub { color: var(--muted); font-size: 13.5px; margin-top: 3px; }
-/* the two stats. Desktop: a plain strip under the header — the number, then "label · detail" quietly under it, no boxes.
-   Phone (below): two small boxes, label above the number, no detail */
-.tiles { display: flex; gap: 40px; margin: 0 0 18px; }
-.tile { display: flex; flex-direction: column; min-width: 0; }
-.tile .v { order: 0; font-size: 30px; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; letter-spacing: -.3px; }
-.tile .k { order: 1; color: var(--muted); font-size: 13px; font-weight: 500; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tile .k .d { font-weight: 400; }
-.tile .of { font-size: 17px; font-weight: 500; } /* "36 of 150" — the count big, the field small */
-.tile .good { color: #35c596; }
-.profile .head { align-items: center; }
-.profile .head select { padding: 5px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--page); color: var(--ink); font: inherit; font-size: 13px; max-width: 300px; min-width: 0; }
-.profile .head .find { flex: 0 1 230px; }
-.profile .head .find input { padding: 5px 10px; font-size: 13px; background: var(--page); }
-.profile .active .sub b { color: var(--ink); }
-.profile .empty a { color: var(--accent); }
 .of { color: var(--muted); }
 .dim { color: var(--muted); font-size: 12.5px; }
-@media (max-width: 640px) {
-  .profile .who { margin: 2px 0 12px; }
-  .profile h1 { font-size: 24px; }
-  .profile .head select, .profile .head .find { flex: 1 1 100%; max-width: none; }
-  .profile .head .find input { font-size: 16px; padding: 7px 10px; }
-  .profile .head select { font-size: 16px; padding: 7px 10px; }
-  .profile td.contest { white-space: normal; color: var(--ink); font-weight: 600; font-size: 13.5px; }
-  .profile .head .note { flex-basis: 100%; }
-}
 
 /* home page = the add-your-teams steps; a visitor who came from the extension gets a card back to their own page */
 .h { font-size: 24px; margin: 4px 0 4px; letter-spacing: -.3px; }
@@ -208,98 +182,6 @@ td.user .pos { margin-right: 4px; }
 /* chosen-player chip: position, team logo, name */
 .tag .pos { margin-right: 2px; }
 .tag .tlogo { margin-right: 4px; }
-
-/* profile page: the filter tools. Desktop = inline in the panel head; phone (below) = a sheet under the funnel button */
-.tools { display: contents; }
-.tools .sheethead, .tools .sortwrap, #filterBtn, #toolsVeil { display: none; }
-.chip.wait { background: var(--grid); color: var(--muted); }
-#filterBtn { position: relative; padding: 6px 9px; line-height: 0; }
-#filterBtn.on::after { content: ""; position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
-
-@media (max-width: 640px) {
-  /* header: name, "193 teams · NFL week 3", a green Live; two tiles, no sub-lines; the bar without a legend */
-  .profile .who { align-items: center; margin: 2px 0 12px; }
-  .profile .who .sub { font-size: 13px; }
-  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
-  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 9px 10px; }
-  .tile .k { order: 0; font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; margin: 0; }
-  .tile .k .d { display: none; }
-  .tile .v { order: 1; font-size: 22px; line-height: 1.3; letter-spacing: 0; }
-  .tile .of { font-size: 14px; font-weight: 500; }
-  .tile .tg { color: var(--muted); font-size: 12px; font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* the chosen tournament under the count */
-  .tiles { margin-bottom: 12px; }
-
-  /* panel head: full-width segmented tabs + the funnel button; the count line goes */
-  .profile .panel { padding: 10px 12px 4px; }
-  .profile .head { flex-wrap: nowrap; gap: 8px; margin-bottom: 8px; }
-  .profile #tabs { flex: 1; gap: 0; background: var(--page); border: 1px solid var(--line); border-radius: 9px; padding: 3px; }
-  .profile #tabs .pill { flex: 1; border: 0; border-radius: 7px; padding: 7px 0; font-size: 14px; }
-  .profile #tabs .pill:not(.on) { color: var(--muted); }
-  .profile .head .spacer, .profile .head .note { display: none; }
-  #filterBtn { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 40px; padding: 0; border-radius: 9px; flex: none; }
-  .tag.sm { display: inline-flex; }
-  .profile .active { gap: 6px; margin-bottom: 8px; }
-  .profile .active .sub { flex-basis: 100%; font-size: 12.5px; color: var(--muted); }
-
-  /* the sheet */
-  #toolsVeil { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.55); }
-  #toolsVeil[hidden] { display: none !important; }
-  #toolsVeil:not([hidden]) { display: block; }
-  .tools { display: flex; flex-direction: column; gap: 12px; position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: var(--surface); border-top: 1px solid var(--line); border-radius: 16px 16px 0 0; padding: 14px 16px calc(18px + env(safe-area-inset-bottom)); transform: translateY(105%); transition: transform .22s ease-out; }
-  body.tools-open .tools { transform: none; }
-  .tools .sheethead { display: flex; align-items: center; justify-content: space-between; font-size: 16px; }
-  .tools .sortwrap { display: flex; align-items: center; gap: 10px; color: var(--ink-2); font-size: 14px; }
-  .tools .sortwrap select { flex: 1; }
-  .tools select, .tools .find input { width: 100%; padding: 10px 12px; font-size: 16px; border-radius: 9px; }
-  .tools .find, .tools select { flex: none; max-width: none; }
-  .tools .hits { top: auto; bottom: calc(100% + 4px); }
-  .tools .check { font-size: 15px; }
-  .tools .check input { width: 18px; height: 18px; }
-  .tools .pills { flex-wrap: wrap; }
-  .tools .pill.mini { padding: 6px 14px; font-size: 14px; }
-
-  /* rows: two lines, no header, no rank. Tournament / name on the left with details under it; the big number on
-     the right with the cut-line chip under it. Same grid for the Exposure tab. */
-  .profile thead { display: none; }
-  .profile tbody tr { display: grid; grid-template-columns: 1fr auto; column-gap: 12px; align-items: start; padding: 11px 0; border-bottom: 1px solid var(--grid); }
-  .profile tbody td { display: block; padding: 0; border: 0; }
-  .profile td.rk, .profile td.col-buyin, .profile td.col-date, .profile td.col-place, .profile td.col-left, .profile td.col-own { display: none; }
-  .profile td.contest, .profile td.user { grid-column: 1; grid-row: 1 / span 2; white-space: normal; color: var(--ink); font-weight: 500; font-size: 15px; line-height: 1.3; }
-  /* Teams tab on a page with tick boxes (body.ticks — the owner's page only): the box is a slim first column; the
-     tournament and the numbers shift one column right. Every other page keeps the two-column rows above. */
-  body.ticks .profile #panel:not(.xp) tbody tr { grid-template-columns: auto 1fr auto; }
-  body.ticks .profile td.tick { grid-column: 1; grid-row: 1 / span 2; align-self: center; margin-right: -2px; }
-  body.ticks .profile td.tick .tick { width: 20px; height: 20px; }
-  body.ticks .profile #panel:not(.xp) td.contest { grid-column: 2; }
-  body.ticks .profile #panel:not(.xp) td.points, body.ticks .profile #panel:not(.xp) td.gap { grid-column: 3; }
-  .profile td.contest .under, .profile td.user .under { font-size: 12.5px; margin-top: 3px; }
-  .profile td.contest .under b { color: var(--ink); }
-  .profile td.points { grid-column: 2; grid-row: 1; font-size: 16px; text-align: right; }
-  .profile td.gap { grid-column: 2; grid-row: 2; text-align: right; }
-  .profile .chip { background: none; padding: 0; font-size: 12.5px; font-weight: 600; }
-  .profile .chip.wait { color: var(--muted); }
-  .profile td.empty { grid-column: 1 / -1; display: block; }
-  .profile .more { padding-bottom: 8px; }
-}
-
-/* profile page on a desktop: the toolbar is tabs · Advancing-only pill · tournament · player search … sort menu;
-   the team rows are two lines like the phone's (entry fee and draft date under the tournament name) */
-@media (min-width: 641px) {
-  .profile .head { gap: 10px; }
-  .profile .head #tabs { order: 0; } .profile .head #advWrap { order: 1; } .profile .head #tickPills { order: 1; } .profile .head #fT { order: 2; }
-  .profile .head #fP, .profile .head #fQ { order: 3; } .profile .head #posPills { order: 4; }
-  .profile .head .spacer { order: 5; } .profile .head .note { order: 6; } .profile .head .sortwrap { order: 7; }
-  .profile .head #advWrap { border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
-  .profile .head #advWrap input { display: none; }
-  .profile .head #advWrap:hover { color: var(--ink); }
-  .profile .head #advWrap.on { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .profile .head .sortwrap { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12.5px; }
-  .profile .head .sortwrap select { max-width: 160px; }
-  .profile .panel.xp .sortwrap { display: none; }
-  .profile td.contest { color: var(--ink); font-weight: 500; }
-  .profile td.contest .under { margin-top: 1px; }
-  .profile td { padding: 8px 10px; }
-}
 
 /* player suggestions: badge · logo · name on the left, team count on the right */
 .hits button { align-items: center; }
@@ -337,4 +219,180 @@ td.user .pos { margin-right: 4px; }
 @media (max-width: 640px) {
   .fcard { grid-template-columns: 1fr; gap: 12px; padding: 12px; }
   .f select, .f .find input { font-size: 16px; }
+}
+
+/* ======================================================================================================
+   profile page (/u/<name>) — design handoff "Profile 12A" (design_handoff_profile_page/README.md):
+   56px nav with a username box · centred identity block with the live pill · ONE 1080px card holding the
+   four stat tiles, the controls row (tabs · week chips · tournament menu) and the teams table (56px rows).
+   Tokens: page #0d0d0d · card #1a1a19 · tile #141413 · border #2c2c2a · input border #383835 · hover #202020
+   ====================================================================================================== */
+.profile, .pbar { --card: #1a1a19; --tile: #141413; --hover: #202020; --dis: #5a5955; --green: #3fcf94; --green-bg: rgba(25,158,112,.16);
+  --red: #e66767; --red-bg: rgba(230,103,103,.16); --amber: #f0b83c; --amber-bg: rgba(240,184,60,.16); font-variant-numeric: tabular-nums; }
+
+/* 1. nav: 56px, inner 1080 column — wordmark · (space) · 240×36 username box · "Add your teams" pill */
+.pbar { position: static; display: block; padding: 0; }
+.pbar .in { max-width: calc(1080px + 32px); margin: 0 auto; height: 56px; display: flex; align-items: center; gap: 20px; padding: 0 16px; }
+.pbar .brand { font-size: 17px; letter-spacing: 0; }
+.pbar .ufind { flex: 0 1 240px; }
+.pbar .ufind input { height: 36px; padding: 0 14px; font-size: 14px; background: transparent; border-color: var(--line); border-radius: 8px; }
+.pbar .ufind input::placeholder { color: var(--muted); }
+.pbar .btn.primary { height: 36px; padding: 0 16px; border-radius: 999px; display: inline-flex; align-items: center; font-weight: 600; }
+.pbar .btn.primary:hover { filter: brightness(1.1); background: var(--accent); }
+
+/* 2. identity block, centred: name + live pill on one line, "193 teams · 6 tournaments · NFL week 3" under it */
+main.profile { max-width: calc(1080px + 32px); padding: 20px 16px 32px; }
+.profile .who { display: block; text-align: center; margin: 0 0 12px; }
+.profile .idrow { display: inline-flex; align-items: center; justify-content: center; gap: 12px; max-width: 100%; }
+.profile h1 { font-size: 26px; font-weight: 700; letter-spacing: -.01em; margin: 0; line-height: 1.2; overflow-wrap: anywhere; }
+.profile .who .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.profile .who .sub b { color: var(--ink); }
+.lp { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; background: var(--green-bg); color: var(--green); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.lp .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.lp.warm { background: var(--amber-bg); color: var(--amber); }
+.lp.bad { background: var(--red-bg); color: var(--red); }
+
+/* 3. the card: padding 12, its three children 12 apart */
+.profile .card { background: var(--card); border: 1px solid var(--grid); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.profile .card > .empty { padding: 40px 10px; }
+/* 3a. stat tiles: 4 across, 70 tall, label over a 22px mono value */
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.tile { background: var(--tile); border: 1px solid var(--grid); border-radius: 8px; height: 70px; padding: 0 14px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; min-width: 0; }
+.tile .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+.tile .v { font: 600 22px/1 var(--mono); margin-top: 6px; color: var(--ink); white-space: nowrap; }
+.tile .good { color: var(--green); }
+
+/* 3b. controls row, 36 tall: tab pills · divider · week chips … tournament menu */
+.profile .head { display: flex; align-items: center; gap: 6px; height: 36px; margin: 0; flex-wrap: nowrap; }
+.profile .pills { display: flex; gap: 6px; }
+.profile .pill { height: 36px; padding: 0 16px; border-radius: 999px; font-size: 13px; font-weight: 400; color: var(--ink-2); border: 1px solid var(--line); background: none; display: inline-flex; align-items: center; cursor: pointer; white-space: nowrap; }
+.profile .pill.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.profile .pill.mini { height: 28px; padding: 0 10px; font-size: 12.5px; }
+.profile .pill:hover, .wk:hover:not(:disabled), .tbtn:hover { filter: brightness(1.15); }
+.vr { width: 1px; height: 20px; background: var(--grid); margin: 0 6px; flex: none; }
+.weeks { display: flex; gap: 6px; align-items: center; }
+.wk { height: 32px; padding: 0 12px; border-radius: 8px; border: 0; background: transparent; color: var(--ink-2); font: 13px var(--mono); cursor: pointer; white-space: nowrap; }
+.wk.on { background: var(--grid); color: var(--ink); font-weight: 600; }
+.wk:disabled { color: var(--dis); cursor: default; }
+.profile .head .note { color: var(--muted); font-size: 12.5px; white-space: nowrap; }
+.tmenu { position: relative; flex: none; order: 1; } /* last in the row — after the Exposure tab's name box */
+.tbtn { height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: none; color: var(--ink-2); font: 13px var(--mono); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; max-width: 340px; }
+.tbtn .tl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tbtn.on { color: var(--ink); border-color: var(--ink-2); }
+.menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; min-width: 280px; max-width: min(460px, calc(100vw - 32px)); max-height: 60vh; overflow-y: auto; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 4px; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+.menu button { display: flex; justify-content: space-between; gap: 12px; width: 100%; padding: 8px 10px; border: 0; border-radius: 6px; background: none; color: var(--ink); font: inherit; font-size: 13px; text-align: left; cursor: pointer; white-space: nowrap; }
+.menu button:hover, .menu button.on { background: var(--hover); }
+.menu button span { color: var(--muted); font-family: var(--mono); }
+/* Exposure tab on a desktop: the name box sits before the tournament menu, pill-shaped like it */
+.profile .head #fQ { flex: 0 1 240px; }
+.profile .head #fQ input { height: 36px; padding: 0 14px; font-size: 13px; border-radius: 999px; background: none; }
+/* what the filters are doing: ticked-teams pills + chips, between the controls and the table */
+.subrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: -2px; }
+.subrow .active { margin: 0; }
+.profile .active .sub b { color: var(--ink); }
+
+/* 3c. the table: header and rows share one grid — # · Team · Place · Cut line · To play · Points */
+.profile table, .profile thead, .profile tbody { display: block; width: 100%; }
+.profile tr { display: grid; grid-template-columns: 40px minmax(0, 1fr) 90px 200px 80px 100px; column-gap: 16px; align-items: center; padding: 0 8px; }
+body.ticks .profile .card:not(.xp) tr { grid-template-columns: 22px 40px minmax(0, 1fr) 90px 200px 80px 100px; }
+.profile .card.xp tr { grid-template-columns: 40px minmax(0, 1fr) 110px 90px 90px 110px 90px; }
+.profile thead tr { padding-bottom: 8px; border-bottom: 1px solid var(--grid); }
+.profile th { padding: 0; border: 0; font-size: 11px; font-weight: 400; letter-spacing: .06em; color: var(--muted); text-transform: uppercase; white-space: nowrap; }
+.profile th.on { color: var(--ink); }
+.profile th .arrow { margin-left: 4px; font-size: inherit; color: inherit; }
+.profile tbody tr { height: 56px; border-bottom: 1px solid var(--grid); cursor: pointer; }
+.profile tbody tr:hover { background: var(--hover); }
+.profile tbody tr.ticked { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.profile tbody tr.ticked:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.profile td { display: block; padding: 0; border: 0; white-space: nowrap; min-width: 0; }
+.profile .num { text-align: right; font-family: var(--mono); }
+.profile th.tick, .profile td.tick { width: auto; padding: 0; }
+.profile td.rk { width: auto; color: var(--muted); text-align: right; padding-right: 8px; font-family: var(--mono); }
+.profile td.team .t1 { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.profile td.team .t2 { font-size: 12px; color: var(--muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; }
+.profile td.col-place .of { color: var(--muted); }
+.profile td.col-left { color: var(--ink-2); }
+.profile td.points { font: 700 15px var(--mono); }
+.profile .chip { display: inline-block; font: 600 12px var(--mono); padding: 4px 8px; border-radius: 6px; background: var(--green-bg); color: var(--green); margin: 0; }
+.profile .chip.out { background: var(--red-bg); color: var(--red); }
+.profile .chip.wait { background: var(--grid); color: var(--muted); }
+.profile td.user { overflow: hidden; text-overflow: ellipsis; }
+.profile td.empty { grid-column: 1 / -1; text-align: center; padding: 22px 10px; white-space: normal; color: var(--muted); }
+.profile .empty a { color: var(--accent); }
+.profile .more { padding: 4px 0 0; }
+
+/* phone-only controls stay out of the way on a desktop: the funnel button, the sheet's own rows (tournament select,
+   player box, Advancing only, sort menu) — the tournament menu and the column headers do those jobs there */
+.tools { display: contents; }
+.tools .sheethead, .tools .sortwrap, .tools #fT, .tools #fP, .tools #advWrap, #filterBtn, #toolsVeil { display: none; }
+#filterBtn { position: relative; padding: 6px 9px; line-height: 0; }
+#filterBtn.on::after { content: ""; position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+
+@media (max-width: 640px) {
+  .pbar .in { gap: 8px; padding: 0 12px; }
+  .pbar .spacer { display: none; }
+  .pbar .ufind { flex: 1 1 auto; }
+  .pbar .ufind input { font-size: 16px; }
+  .pbar .btn.primary { padding: 0 12px; font-size: 13px; }
+  main.profile { padding: 14px 10px 32px; }
+  .profile h1 { font-size: 22px; }
+  .profile .card { padding: 10px 8px; gap: 10px; }
+  /* tiles: two by two, a little shorter */
+  .tiles { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .tile { height: 56px; }
+  .tile .v { font-size: 19px; }
+  /* controls: full-width segmented tabs + the funnel button; the week / position chips on a row of their own */
+  .profile .head { height: auto; flex-wrap: wrap; gap: 8px; }
+  .profile #tabs { flex: 1; gap: 0; background: var(--page); border: 1px solid var(--line); border-radius: 9px; padding: 3px; }
+  .profile #tabs .pill { flex: 1; height: 34px; border: 0; border-radius: 7px; padding: 0; justify-content: center; font-size: 14px; }
+  .profile #tabs .pill:not(.on) { color: var(--muted); }
+  .vr, .profile .head .spacer, .profile .head .note, .tmenu { display: none; }
+  .weeks { flex-basis: 100%; order: 9; overflow-x: auto; scrollbar-width: none; }
+  .wk { height: 30px; padding: 0 10px; }
+  #filterBtn { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 40px; padding: 0; border-radius: 9px; flex: none; }
+  .tag.sm { display: inline-flex; }
+  .subrow { gap: 6px; }
+  .profile .active .sub { flex-basis: 100%; font-size: 12.5px; color: var(--muted); }
+
+  /* the sheet */
+  #toolsVeil { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.55); }
+  #toolsVeil[hidden] { display: none !important; }
+  #toolsVeil:not([hidden]) { display: block; }
+  .tools { display: flex; flex-direction: column; gap: 12px; position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: var(--surface); border-top: 1px solid var(--line); border-radius: 16px 16px 0 0; padding: 14px 16px calc(18px + env(safe-area-inset-bottom)); transform: translateY(105%); transition: transform .22s ease-out; }
+  body.tools-open .tools { transform: none; }
+  .tools .sheethead, .tools .sortwrap, .tools #fT, .tools #fP, .tools #advWrap { display: flex; }
+  .tools .sheethead { align-items: center; justify-content: space-between; font-size: 16px; }
+  .tools .sortwrap { align-items: center; gap: 10px; color: var(--ink-2); font-size: 14px; }
+  .tools .sortwrap select { flex: 1; }
+  .tools select, .tools .find input { width: 100%; padding: 10px 12px; font-size: 16px; border-radius: 9px; border: 1px solid var(--line); background: var(--page); color: var(--ink); font: inherit; font-size: 16px; }
+  .tools .find, .tools select { flex: none; max-width: none; }
+  .profile .head #fQ { flex: none; }
+  .profile .head #fQ input { height: auto; border-radius: 9px; background: var(--page); }
+  .tools .hits { top: auto; bottom: calc(100% + 4px); }
+  .tools .check { font-size: 15px; }
+  .tools .check input { width: 18px; height: 18px; }
+
+  /* rows: two lines, no header, no rank. The team (its top picks, then place · tournament · fee · date) on the left;
+     the points on the right with the cut-line chip under them. Same grid for the Exposure tab. */
+  .profile thead { display: none; }
+  .profile tbody tr { display: grid; grid-template-columns: 1fr auto; column-gap: 12px; align-items: start; height: auto; padding: 10px 0; border-bottom: 1px solid var(--grid); }
+  .profile tbody td { display: block; padding: 0; border: 0; }
+  .profile td.rk, .profile td.col-buyin, .profile td.col-date, .profile td.col-place, .profile td.col-left, .profile td.col-own { display: none; }
+  .profile td.team, .profile td.user { grid-column: 1; grid-row: 1 / span 2; white-space: normal; color: var(--ink); font-weight: 500; font-size: 15px; line-height: 1.3; }
+  .profile td.team .t1 { white-space: normal; overflow-wrap: anywhere; font-size: 14px; }
+  .profile td.team .t2 { white-space: normal; font-size: 12.5px; margin-top: 3px; }
+  .profile td.team .t2 b { color: var(--ink); }
+  /* Teams tab on a page with tick boxes (body.ticks — the owner's page only): the box is a slim first column */
+  body.ticks .profile .card:not(.xp) tbody tr { grid-template-columns: auto 1fr auto; }
+  body.ticks .profile td.tick { grid-column: 1; grid-row: 1 / span 2; align-self: center; margin-right: -2px; }
+  body.ticks .profile td.tick .tick { width: 20px; height: 20px; }
+  body.ticks .profile .card:not(.xp) td.team { grid-column: 2; }
+  body.ticks .profile .card:not(.xp) td.points, body.ticks .profile .card:not(.xp) td.gap { grid-column: 3; }
+  .profile td.user .under { font-size: 12.5px; margin-top: 3px; }
+  .profile td.points { grid-column: 2; grid-row: 1; font-size: 16px; text-align: right; }
+  .profile td.gap { grid-column: 2; grid-row: 2; text-align: right; }
+  .profile .chip { background: none; padding: 0; font-size: 12.5px; }
+  .profile .chip.wait { background: none; }
+  .profile td.empty { grid-column: 1 / -1; display: block; }
+  .profile .more { padding-bottom: 8px; }
 }
