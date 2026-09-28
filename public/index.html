@@ -36,11 +36,11 @@
 
   <figure class="peek" id="peek">
     <div class="tabs" role="tablist"><button class="on" type="button" data-v="teams">Teams</button><button type="button" data-v="exposure">Player exposure</button></div>
-    <a class="shot" id="peekLink" href="/u/kknox20"><picture>
+    <div class="shot"><picture>
       <source id="peekPhone" media="(max-width: 640px)" srcset="/preview-phone.png" width="375" height="760">
-      <img id="peekImg" src="/preview-teams.png" width="1085" height="800" alt="A synced page on dkbbdb: every team's league place, cut line and points, scored live">
-    </picture></a>
-    <figcaption>This is what you get: one page for your account, scored live during the games. It is a real page &mdash; <a href="/u/kknox20">open it</a>. There is no search on the site; yours will be at <span class="mono">dkbbdb.com/u/your-username</span> and anyone you give that link to can see it.</figcaption>
+      <img id="peekImg" src="/preview-teams.png" width="1085" height="800" alt="A synced page on dkbbdb (sample data): every team's league place, cut line and points, scored live">
+    </picture></div>
+    <figcaption>This is what you get: one page for your account, scored live during the games (sample data). There is no search on the site; your page will be at <span class="mono">dkbbdb.com/u/your-username</span> and anyone you give that link to can see it.</figcaption>
   </figure>
 
   <div class="step">
@@ -73,7 +73,6 @@ document.querySelectorAll("#peek .tabs button").forEach((b) => b.addEventListene
   const xp = b.dataset.v === "exposure";
   document.getElementById("peekPhone").srcset = xp ? "/preview-phone-exposure.png" : "/preview-phone.png";
   document.getElementById("peekImg").src = xp ? "/preview-exposure.png" : "/preview-teams.png";
-  document.getElementById("peekLink").href = xp ? "/u/kknox20?tab=exposure" : "/u/kknox20";
 }));
 document.getElementById("go").addEventListener("submit", (e) => { e.preventDefault(); const n = e.target.querySelector("input").value.trim(); if (n) location.href = "/u/" + encodeURIComponent(n) + "?me=1"; });
 </script>

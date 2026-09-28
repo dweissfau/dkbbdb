@@ -179,7 +179,7 @@ td.user .pos { margin-right: 4px; }
 .mine:hover { background: #222220; }
 .mono { font-family: ui-monospace, Consolas, monospace; font-size: 13px; color: var(--ink); }
 
-/* home page: a real synced page (kknox20's) above the steps — Teams / Player exposure tabs swap the picture; a phone
+/* home page: a sample synced page (made-up name and numbers) above the steps — Teams / Player exposure tabs swap the picture; a phone
    sees the phone view (the <source>), at its own width */
 .peek { margin: 0 0 18px; }
 .peek .tabs { display: flex; gap: 6px; margin-bottom: 8px; }
