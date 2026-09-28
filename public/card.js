@@ -68,7 +68,7 @@
     const ROW = 54, HEAD = 58, GAP = 22;
     const top = 320 + (scored ? 44 : 0);
     const body = gs.reduce((h, [, rows]) => h + HEAD + rows.length * ROW + GAP, 0);
-    const H = top + body + 70;
+    const H = top + body + 26; // no footer: the header already says dkbbdb.com
     const canvas = document.createElement("canvas");
     canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext("2d");
@@ -139,10 +139,6 @@
       y += GAP;
     }
 
-    // ---- footer ----
-    ctx.fillStyle = MUTED; ctx.font = `500 22px ${FONT}`; ctx.textBaseline = "top";
-    ctx.fillText(user ? `dkbbdb.com/u/${user}` : "dkbbdb.com", PAD, H - 62);
-    if (season.size) { ctx.textAlign = "right"; ctx.fillText("points = weeks he started", W - PAD, H - 62); ctx.textAlign = "left"; }
     return canvas;
   }
 
