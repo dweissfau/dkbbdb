@@ -36,6 +36,9 @@ js = swap(js,
   `const res = await fetch(window.dkbbLiveUrl(), { headers: LIVE.etag ? { "If-None-Match": LIVE.etag } : {}, cache: "no-cache" });`,
   "live fetch");
 js = swap(js, `applyLive(expandLive(await res.json()));`, `applyLive(expandLive(await res.json())); window.dkbbAfterLive?.();`, "after-live hook");
+// other players in a league are shown by draft seat, without a roster (api/live.js) — the wording says so
+js = swap(js, `· tap a team to see its roster</span></h4>`, `· other players are shown by draft seat · tap a team to see its week by week</span></h4>`, "standings note");
+js = swap(js, `This team's roster hasn't been synced yet — run "Sync opponent rosters" in the extension.`, `Other players' rosters aren't shown on dkbbdb — only the teams of people who added them.`, "opponent roster note");
 js = swap(js,
   `    ["My effective buy-ins", fmt$(myFees),
       shared.length ? \`of \${fmt$(fees)} total — partners carry the rest\` : "no shared teams marked yet"],

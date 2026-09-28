@@ -4,7 +4,7 @@
   "description": "",
   "scripts": {
     "backup": "node scripts/backup.mjs",
-    "check": "node scripts/check-offline.mjs && node scripts/check-leaderboard.mjs && node scripts/check-board.mjs"
+    "check": "node scripts/check-offline.mjs && node scripts/check-leaderboard.mjs && node scripts/check-board.mjs && node scripts/check-scrub.mjs"
   },
   "keywords": [],
   "author": "",

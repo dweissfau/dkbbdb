@@ -808,7 +808,7 @@ function leagueStandingsHtml(d, selKey) {
           <td class="num">${places.get(k) ?? "—"}</td><td class="team-name">${esc(n)}${hasHim(k) ? `<span class="tag ${me ? "mine" : "opp"}">has him</span>` : ""}</td>
           <td class="num">${w != null ? Number(w).toFixed(2) : "—"}</td><td class="num wk-muted">${p != null ? Number(p).toFixed(2) : "—"}${r != null ? ` · ${ordinal(r)}` : ""}</td></tr>`; }).join("")}</tbody></table></div>`;
   }
-  return `<h4>League standings <span class="lg-note">${pod.length} teams · top ${cut ?? "?"} advance · "left" = players yet to play this week · tap a team to see its roster</span></h4>
+  return `<h4>League standings <span class="lg-note">${pod.length} teams · top ${cut ?? "?"} advance · "left" = players yet to play this week · other players are shown by draft seat · tap a team to see its week by week</span></h4>
     <div class="scroll-x"><table><thead><tr><th class="num">#</th><th>Team</th><th class="num">Points</th><th class="num">Left</th></tr></thead>
     <tbody>${pod.map(([k, n, r, p, t], i) => { const me = k === d.id, adv = inCut(r), lastIn = adv && !(pod[i + 1] && inCut(pod[i + 1][2]));
       const has = searchQuery() !== "" && (me ? (picksByEntry.get(d.id) ?? []).some((pk) => playerMatch(P[pk.pl]?.n)) : (podRoster(d.contestId, k) ?? []).some((p) => playerMatch(p.name)));
@@ -841,7 +841,7 @@ function leagueRosterHtml(d, key) {
         <td class="num">${p.wk != null ? Number(p.wk).toFixed(2) : "—"}</td><td class="num">${p.season != null ? Number(p.season).toFixed(2) : "—"}</td></tr>`).join("")}</tbody></table></div>
       <div class="lg-note" style="margin-top:6px">${inWeek ? `The lineup DraftKings counted in week ${wkNo}: starters` : "Starters"} first, then bench. Season = points in weeks he started.</div>`;
   }
-  if (!me) return head + `<div class="lg-note" style="padding:8px 0">This team's roster hasn't been synced yet — run "Sync opponent rosters" in the extension.</div>`;
+  if (!me) return head + `<div class="lg-note" style="padding:8px 0">Other players' rosters aren't shown on dkbbdb — only the teams of people who added them.</div>`;
   // my own team without an opponent-roster sync: fall back to the per-player scores table
   const scoreRows = (SEA.scores[d.id] ?? []).slice().sort((a, b) => (b[2] ?? b[1]) - (a[2] ?? a[1]) || (b[3] ?? 0) - (a[3] ?? 0));
   if (!scoreRows.length) return head + `<div class="lg-note" style="padding:8px 0">No player scores synced yet.</div>`;

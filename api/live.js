@@ -11,7 +11,10 @@ export default async function handler(req, res) {
   const one = store && req.query.entry ? entryOwner(store, req.query.entry) : null;
   if (!one) { res.setHeader("cache-control", "no-store"); return res.status(404).json({ error: "that team is not on dkbbdb" }); }
   const keys = [one.account.user_key];
-  const r = await userView(keys, { ifNoneMatch: String(req.headers["if-none-match"] ?? ""), only: [one.entryId], base: baseOf(store, keys, [one.entryId]) });
+  // other players in the league: by draft seat, no roster (lib/view.js scrubView) — only synced teams are named
+  const reveal = new Set(Object.keys(store.entries));
+  const seatOf = (cid, key) => store.pods?.[cid]?.rosters?.[key]?.s ?? null;
+  const r = await userView(keys, { ifNoneMatch: String(req.headers["if-none-match"] ?? ""), only: [one.entryId], base: baseOf(store, keys, [one.entryId]), reveal, seatOf });
   res.setHeader("cache-control", "public, s-maxage=30, stale-while-revalidate=30");
   if (r.etag) res.setHeader("etag", r.etag);
   if (r.status === 304) return res.status(304).end();
