@@ -1,26 +1,44 @@
 # Scores dkbbdb's board off the site (scripts/score.mjs) and hands it to https://dkbbdb.com/api/board.
-# Schedules are UTC. Windows cover NFL game time in Eastern time with an hour to spare for daylight saving:
-#   Sunday 1 pm – midnight ET       every 5 min      (17:00–23:59 UTC Sun + 00:00–04:59 UTC Mon)
-#   Sunday / Monday / Thursday night games            (00:00–04:59 UTC Mon / Tue / Fri)
-#   every day 6 am ET                                 (stat corrections, the morning board)
-# A run costs about a minute of Actions time; a private repo has 2,000 free minutes a month, a public one unlimited.
+# ONE JOB PER GAME WINDOW: the job starts at the window's opening and scores every 5 minutes until DKBBDB_UNTIL (a
+# UTC clock time chosen below from the cron that fired), instead of a cron tick per refresh — GitHub's schedule is
+# best effort, and on Sunday 2026-09-27 it delivered 3 of the ~140 "*/5" ticks. Each window has three staggered
+# starts because a start can be delayed too; the concurrency group lets only one run, and a stagger that starts
+# after its window has closed does a single pass and stops. A job may run 6 h, so Sunday is two windows.
+# Schedules are UTC; the windows cover Eastern game time in both daylight and standard time:
+#   Sunday   17:00–23:00 UTC   1 pm ET kickoffs through the late-afternoon games
+#   Sunday   23:00–05:00 UTC   the end of the late games and Sunday Night Football
+#   Mon/Thu  00:00–05:00 UTC   Monday / Thursday night games (the starts are 23:55 the day before)
+#   daily    10:00 UTC         stat corrections, the morning board (a single pass)
 # The only secret is CRON_SECRET (the site's); the job pulls the league file from the site and posts the board back.
+# Manual: gh workflow run score --repo dweissfau/dkbbdb [-f until=05:00]
 name: score
 on:
   schedule:
-    - cron: "*/5 17-23 * * 0"
-    - cron: "*/5 0-4 * * 1"
-    - cron: "*/5 0-4 * * 2"
-    - cron: "*/5 0-4 * * 5"
+    - cron: "55 16 * * 0"
+    - cron: "5 17 * * 0"
+    - cron: "20 17 * * 0"
+    - cron: "55 22 * * 0"
+    - cron: "5 23 * * 0"
+    - cron: "20 23 * * 0"
+    - cron: "55 23 * * 1,4"
+    - cron: "5 0 * * 2,5"
+    - cron: "20 0 * * 2,5"
     - cron: "0 10 * * *"
   workflow_dispatch:
+    inputs:
+      until:
+        description: "keep scoring every 5 min until this UTC time (HH:MM); empty = one pass"
+        required: false
+        default: ""
+# scheduled runs queue behind each other (a stagger waits for the window's job, then does one pass); a manual run
+# may go alongside a window's job
 concurrency:
-  group: score
+  group: score-${{ github.event_name }}
   cancel-in-progress: false
 jobs:
   score:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,13 +46,27 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --omit=dev
-      # the finished-week totals (~3 MB) are kept between runs; a new entry is saved once a day
+      # the finished-week totals (~3 MB) are kept between runs
       - uses: actions/cache@v4
         with:
           path: .blob/store/prior.json.gz
           key: prior-v1-${{ github.run_id }}
           restore-keys: prior-v1-
+      # which window did the cron open? (github.event.schedule is the cron expression that fired)
+      - id: window
+        env:
+          CRON: ${{ github.event.schedule }}
+          MANUAL: ${{ inputs.until }}
+        run: |
+          case "$CRON" in
+            "55 16 * * 0"|"5 17 * * 0"|"20 17 * * 0") until=23:00 ;;
+            "55 22 * * 0"|"5 23 * * 0"|"20 23 * * 0"|"55 23 * * 1,4"|"5 0 * * 2,5"|"20 0 * * 2,5") until=05:00 ;;
+            *) until="$MANUAL" ;;
+          esac
+          echo "until=$until" >> "$GITHUB_OUTPUT"
+          echo "window closes at: ${until:-(single pass)}"
       - run: node scripts/score.mjs
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           DKBBDB_SITE: ${{ vars.DKBBDB_SITE || 'https://dkbbdb.com' }}
+          DKBBDB_UNTIL: ${{ steps.window.outputs.until }}
