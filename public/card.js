@@ -1,7 +1,7 @@
 // "Save image" on the team pop-up: a share card of one team, drawn on a canvas from the team's own picks — QB, then RB,
 // then WR, then TE, each group in the order the players were drafted. Loaded by boot.js after app.js; it reads the
-// pop-up's globals (DK, P, SEA, draftById, picksByEntry, podRoster, shortContest, openSeason.current) and adds a
-// "save image" link to the pop-up's first line whenever the pop-up is (re)drawn. On a phone the image goes to the share
+// pop-up's globals (DK, P, SEA, draftById, picksByEntry, podRoster, shortContest, openSeason.current) and puts a
+// "Save image" button beside the close ✕ whenever the pop-up is (re)drawn. On a phone the image goes to the share
 // sheet, elsewhere it downloads as a PNG. Team logos come from the same CDN the page uses (it allows canvas use).
 (() => {
   const ORDER = ["QB", "RB", "WR", "TE"];
@@ -146,9 +146,9 @@
     return canvas;
   }
 
-  async function save(id, el) {
+  async function save(id, el, btn) {
     const d = draftById.get(id);
-    const was = el.textContent; el.textContent = "drawing…";
+    const was = el.textContent; el.textContent = "Drawing…"; if (btn) btn.disabled = true;
     try {
       const canvas = await render(id);
       const blob = await new Promise((ok) => canvas.toBlob(ok, "image/png"));
@@ -163,25 +163,36 @@
       setTimeout(() => URL.revokeObjectURL(a.href), 10000);
     } catch (e) {
       alert(`Couldn't make the image: ${e?.message ?? e}`);
-    } finally { el.textContent = was; }
+    } finally { el.textContent = was; if (btn) btn.disabled = false; }
   }
 
-  // the link goes on the pop-up's first line, after "view roster →", every time the pop-up is drawn
-  function addLink() {
+  // a "Save image" button at the top of the pop-up, beside the close ✕, every time the pop-up is drawn
+  const style = document.createElement("style");
+  style.textContent = `
+#modal .card-btn { float: right; margin: -1px 10px 0 8px; display: inline-flex; align-items: center; gap: 6px; background: var(--accent); color: #fff;
+  border: 0; border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 13px; font-weight: 600; line-height: 1.2; cursor: pointer; }
+#modal .card-btn:hover { filter: brightness(1.12); }
+#modal .card-btn:disabled { opacity: .6; cursor: default; }
+#modal .card-btn svg { width: 15px; height: 15px; flex: none; }
+@media (max-width: 700px) { #modal .card-btn { margin: 0 8px 0 6px; padding: 6px 10px; } }`;
+  document.head.appendChild(style);
+  const ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 19h16"/></svg>';
+  function addButton() {
     const box = document.getElementById("modalBox");
     const id = window.openSeason?.current?.id;
-    if (!box || id == null || box.querySelector("[data-card]")) return;
-    const meta = box.querySelector(".meta .plink")?.closest(".meta"); if (!meta) return;
-    const span = document.createElement("span");
-    span.className = "plink"; span.dataset.card = String(id); span.textContent = "save image ↓";
-    span.title = "Save this team as an image: QB, RB, WR, TE in draft order";
-    meta.append(" · ", span);
-    span.addEventListener("click", () => save(Number(span.dataset.card), span));
-    // warm the logos so the image is ready by the time the link is tapped
+    if (!box || id == null || box.querySelector(".card-btn")) return;
+    const close = box.querySelector(".close"); if (!close) return;
+    const btn = document.createElement("button");
+    btn.className = "card-btn"; btn.type = "button"; btn.dataset.card = String(id);
+    btn.innerHTML = `${ICON}<span>Save image</span>`;
+    btn.title = "Save this team as an image: QB, RB, WR, TE in draft order";
+    close.after(btn);
+    btn.addEventListener("click", () => save(Number(btn.dataset.card), btn.querySelector("span"), btn));
+    // warm the logos so the image is ready by the time the button is tapped
     for (const [, rows] of groups(id)) for (const r of rows) { const u = logoUrl(r.team); if (u) loadImage(u); }
   }
   const box = document.getElementById("modalBox");
-  if (box) new MutationObserver(addLink).observe(box, { childList: true });
-  addLink();
+  if (box) new MutationObserver(addButton).observe(box, { childList: true });
+  addButton();
   window.dkbbCard = { render, groups };
 })();
