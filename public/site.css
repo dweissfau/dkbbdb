@@ -179,6 +179,17 @@ td.user .pos { margin-right: 4px; }
 .mine:hover { background: #222220; }
 .mono { font-family: ui-monospace, Consolas, monospace; font-size: 13px; color: var(--ink); }
 
+/* home page: a real synced page (kknox20's) above the steps — Teams / Player exposure tabs swap the picture; a phone
+   sees the phone view (the <source>), at its own width */
+.peek { margin: 0 0 18px; }
+.peek .tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+.peek .tabs button { background: none; border: 1px solid var(--line); color: var(--ink-2); font: inherit; font-weight: 600; font-size: 13px; padding: 5px 12px; border-radius: 999px; cursor: pointer; }
+.peek .tabs button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.peek .shot { display: block; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--page); }
+.peek img { display: block; width: 100%; height: auto; }
+.peek figcaption { color: var(--ink-2); font-size: 13.5px; margin-top: 8px; }
+@media (max-width: 640px) { .peek .shot { max-width: 390px; margin: 0 auto; } }
+
 /* chosen-player chip: position, team logo, name */
 .tag .pos { margin-right: 2px; }
 .tag .tlogo { margin-right: 4px; }
@@ -375,7 +386,7 @@ body.ticks .profile .card:not(.xp) tr { grid-template-columns: 22px 40px minmax(
   /* rows: two lines, no header, no rank. The team (its top picks, then place · tournament · fee · date) on the left;
      the points on the right with the cut-line chip under them. Same grid for the Exposure tab. */
   .profile thead { display: none; }
-  .profile tbody tr { display: grid; grid-template-columns: 1fr auto; column-gap: 12px; align-items: start; height: auto; padding: 10px 0; border-bottom: 1px solid var(--grid); }
+  .profile tbody tr, .profile .card.xp tbody tr { display: grid; grid-template-columns: 1fr auto; column-gap: 12px; align-items: start; height: auto; padding: 10px 0; border-bottom: 1px solid var(--grid); }
   .profile tbody td { display: block; padding: 0; border: 0; }
   .profile td.rk, .profile td.col-buyin, .profile td.col-date, .profile td.col-place, .profile td.col-left, .profile td.col-own { display: none; }
   .profile td.team, .profile td.user { grid-column: 1; grid-row: 1 / span 2; white-space: normal; color: var(--ink); font-weight: 500; font-size: 15px; line-height: 1.3; }

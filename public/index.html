@@ -34,6 +34,15 @@
   <h1 class="h">Add your DraftKings best ball teams</h1>
   <p class="lead">Two steps, about a minute, no sign-up. You need a computer with Chrome for this part; after that, any phone works.</p>
 
+  <figure class="peek" id="peek">
+    <div class="tabs" role="tablist"><button class="on" type="button" data-v="teams">Teams</button><button type="button" data-v="exposure">Player exposure</button></div>
+    <a class="shot" id="peekLink" href="/u/kknox20"><picture>
+      <source id="peekPhone" media="(max-width: 640px)" srcset="/preview-phone.png" width="375" height="760">
+      <img id="peekImg" src="/preview-teams.png" width="1085" height="800" alt="A synced page on dkbbdb: every team's league place, cut line and points, scored live">
+    </picture></a>
+    <figcaption>This is what you get: one page for your account, scored live during the games. It is a real page &mdash; <a href="/u/kknox20">open it</a>. There is no search on the site; yours will be at <span class="mono">dkbbdb.com/u/your-username</span> and anyone you give that link to can see it.</figcaption>
+  </figure>
+
   <div class="step">
     <h2><span class="num">1</span>Install the extension</h2>
     <p>DraftKings only shows your drafts to your own signed-in browser, so a small Chrome extension reads them for you. It never sees your DraftKings password, and it only runs on your DraftKings contests page.</p>
@@ -54,15 +63,18 @@
     <form class="goform" id="go" autocomplete="off"><input type="text" placeholder="DraftKings username" aria-label="Your DraftKings username" spellcheck="false" autocapitalize="off" required><button class="btn primary" type="submit">Open my page</button></form>
   </div>
 
-  <div class="step">
-    <h2>What you get</h2>
-    <p>One page for your account: every season-long team's league place, cut line and points, and your exposure to every player — scored live from public NFL stats. There is no search on the site; your page is at <span class="mono">dkbbdb.com/u/your-username</span> and anyone you give that link to can see it.</p>
-  </div>
-
   <footer>Independent tool — not affiliated with, endorsed by, or sponsored by DraftKings. DraftKings is a trademark of its owner. · <a href="/privacy">Privacy</a></footer>
 </main>
 <script>
 // the box for another device: straight to that page (no look-up); the page marks itself as this browser's own if it has teams
+// the preview: Teams / Player exposure, the phone's own view on a phone (the <source>), the link follows the tab
+document.querySelectorAll("#peek .tabs button").forEach((b) => b.addEventListener("click", () => {
+  document.querySelectorAll("#peek .tabs button").forEach((x) => x.classList.toggle("on", x === b));
+  const xp = b.dataset.v === "exposure";
+  document.getElementById("peekPhone").srcset = xp ? "/preview-phone-exposure.png" : "/preview-phone.png";
+  document.getElementById("peekImg").src = xp ? "/preview-exposure.png" : "/preview-teams.png";
+  document.getElementById("peekLink").href = xp ? "/u/kknox20?tab=exposure" : "/u/kknox20";
+}));
 document.getElementById("go").addEventListener("submit", (e) => { e.preventDefault(); const n = e.target.querySelector("input").value.trim(); if (n) location.href = "/u/" + encodeURIComponent(n) + "?me=1"; });
 </script>
 </body>
