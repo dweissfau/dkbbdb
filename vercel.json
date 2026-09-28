@@ -17,6 +17,15 @@
       ]
     },
     {
+      "source": "/card.js",
+      "headers": [
+        {
+          "key": "cache-control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
       "source": "/boot.js",
       "headers": [
         {

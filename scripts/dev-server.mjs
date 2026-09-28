@@ -8,7 +8,7 @@ import path from "node:path";
 import { ROOT } from "./db.mjs";
 const api = (process.argv[2] ?? "https://dkbbdb.com").replace(/\/$/, ""), port = Number(process.argv[3] ?? 8787);
 const pub = path.join(ROOT, "public");
-const TYPES = { html: "text/html; charset=utf-8", js: "text/javascript", css: "text/css", png: "image/png", json: "application/json" };
+const TYPES = { html: "text/html; charset=utf-8", js: "text/javascript", css: "text/css", png: "image/png", svg: "image/svg+xml", json: "application/json" };
 const page = (p) => p === "/" ? "index.html" : /^\/u\/[^/]+$/.test(p) ? "u.html" : /^\/team\/[^/]+$/.test(p) ? "app.html" : p.slice(1) + (path.extname(p) ? "" : ".html");
 http.createServer(async (req, res) => {
   const u = new URL(req.url, "http://x");

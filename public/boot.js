@@ -62,6 +62,7 @@
       new MutationObserver(() => { if (!modal.classList.contains("on")) closeFrame(); }).observe(modal, { attributes: true, attributeFilter: ["class"] });
     };
     await loadScript("/app.js");
+    loadScript("/card.js").catch(() => {}); // "save image" on the pop-up; the pop-up works without it
     setTimeout(() => window.dkbbAfterLive(), 8000); // live scores unavailable: still show the rosters
   }
 
