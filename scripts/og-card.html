@@ -1,0 +1,22 @@
+<!-- Source of public/og.png (the link preview on Twitter, iMessage, Discord …). Re-render with:
+     node scripts/shot.mjs "file:///<abs path>/scripts/og-card.html" public/og.png 1200 630   then bump ?v= on the og:image tags -->
+<!doctype html><meta charset="utf-8">
+<style>
+  html, body { margin: 0; background: #0d0d0d; }
+  body { width: 1200px; height: 630px; overflow: hidden; color: #fff; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; position: relative; }
+  .brand { position: absolute; left: 92px; top: 88px; display: flex; align-items: center; gap: 26px; }
+  .brand svg { width: 138px; height: 138px; }
+  .brand .word { font-size: 118px; font-weight: 800; letter-spacing: -2px; line-height: 1; }
+  h1 { position: absolute; left: 92px; top: 300px; margin: 0; font-size: 48px; white-space: nowrap; font-weight: 800; line-height: 1.15; letter-spacing: -.5px; }
+  .sub { position: absolute; left: 92px; top: 388px; font-size: 32px; color: #c3c2b7; }
+  .cta { position: absolute; left: 92px; top: 526px; font-size: 30px; color: #3987e5; }
+  .note { position: absolute; left: 92px; top: 576px; font-size: 20px; color: #898781; }
+</style>
+<div class="brand">
+  <svg viewBox="0 0 64 64"><path d="M4 18l14 14 14-24 14 24 14-14-7 40H11z" fill="#3987e5"/></svg>
+  <div class="word">dkbbdb</div>
+</div>
+<h1>All your DraftKings best ball teams, one page</h1>
+<div class="sub">Advancing · exposure · week by week · every league and roster</div>
+<div class="cta">Add your teams in a minute — free, no sign-up.</div>
+<div class="note">Not affiliated with DraftKings.</div>
